@@ -1,4 +1,5 @@
 {
+  "private": true,
   "name": "alien-bot",
   "version": "0.0.0",
   "description": "Discord chat bot for playing 'Push the Button'",
