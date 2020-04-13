@@ -1,0 +1,19 @@
+{
+  "name": "alien-bot",
+  "version": "0.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kevin314/alien-bot.git"
+  },
+  "author": "Kevin Lin",
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/kevin314/alien-bot/issues"
+  },
+  "homepage": "https://github.com/kevin314/alien-bot#readme"
+}
