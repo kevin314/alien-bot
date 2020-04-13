@@ -1,7 +1,7 @@
 const nock = require('nock');
 const Message = require('./Message');
 
-test('Message.edit non-empty text, no embed', () => {
+test('Message.edit non-empty text, no embed', async () => {
   const replyString = `
 {
   "id": "699076792958320725",
@@ -34,7 +34,7 @@ test('Message.edit non-empty text, no embed', () => {
       authorization: /Bot \S+$/,
     },
   })
-    .get('/channels/696525324451577939/messages/699076792958320725')
+    .patch('/channels/696525324451577939/messages/699076792958320725')
     .reply(200, JSON.parse(replyString), {
       'content-type': 'application/json',
       'date': 'Mon, 13 Apr 2020 02:04:41 GMT',
@@ -73,7 +73,7 @@ test('Message.edit non-empty text, no embed', () => {
   `;
   const messageJSONObject = JSON.parse(jsonString);
   const msg = new Message(messageJSONObject);
-  msg.edit('Edited message');
+  await msg.edit('Edited message');
 
   // Verify that the object's fields reflect the JSON response
   expect(msg.id).toBe('699076792958320725');
