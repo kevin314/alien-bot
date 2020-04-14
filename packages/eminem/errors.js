@@ -1,3 +1,5 @@
+/* eslint-disable require-jsdoc */
+
 class EditDeletedMessageError extends Error {
   constructor() {
     super();

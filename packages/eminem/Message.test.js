@@ -35,15 +35,15 @@ test('Message.edit non-empty text, no embed', async () => {
       authorization: /Bot \S+$/,
     },
   })
-    .patch('/channels/696525324451577939/messages/699076792958320725')
-    .reply(200, JSON.parse(replyString), {
-      'content-type': 'application/json',
-      'date': 'Mon, 13 Apr 2020 02:04:41 GMT',
-      'x-ratelimit-bucket': '80c17d2f203122d936070c88c8d10f33',
-      'x-ratelimit-limit': 5,
-      'x-ratelimit-remaining': 4,
-      'x-ratelimit-reset': 1586743487,
-    });
+      .patch('/channels/696525324451577939/messages/699076792958320725')
+      .reply(200, JSON.parse(replyString), {
+        'content-type': 'application/json',
+        'date': 'Mon, 13 Apr 2020 02:04:41 GMT',
+        'x-ratelimit-bucket': '80c17d2f203122d936070c88c8d10f33',
+        'x-ratelimit-limit': 5,
+        'x-ratelimit-remaining': 4,
+        'x-ratelimit-reset': 1586743487,
+      });
 
   const jsonString = `
 {
@@ -86,7 +86,7 @@ test('Message.edit non-empty text, no embed', async () => {
 
 test('Message.edit non-empty text, no embed, not author', async () => {
   // No API request expected
-  const scope = nock('https://discordapp.com');
+  const scope = nock('https://discordapp.com'); // eslint-disable-line no-unused-vars
 
   const jsonString = `
 {
