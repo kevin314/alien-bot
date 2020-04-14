@@ -86,26 +86,8 @@ test('Message.edit non-empty text, no embed', async () => {
 
 
 test('Message.edit non-empty text, no embed, not author', async () => {
-  const replyString = `
-{
-  "message": "Cannot edit a message authored by another user",
-  "code": 50005
-}
-  `;
-  const scope = nock('https://discordapp.com/api', {
-    reqheaders: {
-      authorization: /Bot \S+$/,
-    },
-  })
-    .patch('/channels/696525324451577939/messages/699067552697155634')
-    .reply(200, JSON.parse(replyString), {
-      'content-type': 'application/json',
-      'date': 'Mon, 13 Apr 2020 02:04:41 GMT',
-      'x-ratelimit-bucket': '80c17d2f203122d936070c88c8d10f33',
-      'x-ratelimit-limit': 5,
-      'x-ratelimit-remaining': 4,
-      'x-ratelimit-reset': 1586743487,
-    });
+  // No API request expected
+  const scope = nock('https://discordapp.com/api');
 
   const jsonString = `
 {
@@ -141,4 +123,5 @@ test('Message.edit non-empty text, no embed, not author', async () => {
   expect(msg.type).toBe(0);
   expect(msg.content).toBe('sugoi');
   // todo...
+  scope.done();
 });
