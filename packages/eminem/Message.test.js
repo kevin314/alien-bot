@@ -87,10 +87,10 @@ test('Message.edit non-empty text, no embed', async () => {
 
 test('Message.edit non-empty text, no embed, not author', async () => {
   const replyString = `
-  {
-    "message": "Cannot edit a message authored by another user",
-    "code": 50005
-  }
+{
+  "message": "Cannot edit a message authored by another user",
+  "code": 50005
+}
   `;
   const scope = nock('https://discordapp.com/api', {
     reqheaders: {
