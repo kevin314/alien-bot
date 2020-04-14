@@ -1,5 +1,6 @@
 const nock = require('nock');
 const Message = require('./Message');
+const {EditNotOwnMessage} = require('./errors');
 
 test('Message.edit non-empty text, no embed', async () => {
   const replyString = `
@@ -82,8 +83,31 @@ test('Message.edit non-empty text, no embed', async () => {
   // todo...
   expect(scope.isDone()).toBe(true);
 });
-/*
-`
+
+
+test('Message.edit non-empty text, no embed, not author', async () => {
+  const replyString = `
+  {
+    "message": "Cannot edit a message authored by another user",
+    "code": 50005
+  }
+  `;
+  const scope = nock('https://discordapp.com/api', {
+    reqheaders: {
+      authorization: /Bot \S+$/,
+    },
+  })
+    .patch('/channels/696525324451577939/messages/699067552697155634')
+    .reply(200, JSON.parse(replyString), {
+      'content-type': 'application/json',
+      'date': 'Mon, 13 Apr 2020 02:04:41 GMT',
+      'x-ratelimit-bucket': '80c17d2f203122d936070c88c8d10f33',
+      'x-ratelimit-limit': 5,
+      'x-ratelimit-remaining': 4,
+      'x-ratelimit-reset': 1586743487,
+    });
+
+  const jsonString = `
 {
   "id": "699067552697155634",
   "type": 0,
@@ -107,11 +131,14 @@ test('Message.edit non-empty text, no embed', async () => {
   "edited_timestamp": null,
   "flags": 0
 }
-`
-`
-{
-  "message": "Cannot edit a message authored by another user",
-  "code": 50005
-}
-`
-*/
+  `;
+  const messageJSONObject = JSON.parse(jsonString);
+  const msg = new Message(messageJSONObject);
+  expect(await msg.edit('Edited message')).toThrow(EditNotOwnMessage);
+
+  // Verify that the object's fields reflect the JSON response
+  expect(msg.id).toBe('699067552697155634');
+  expect(msg.type).toBe(0);
+  expect(msg.content).toBe('sugoi');
+  
+});
