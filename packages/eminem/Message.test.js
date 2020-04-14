@@ -134,11 +134,11 @@ test('Message.edit non-empty text, no embed, not author', async () => {
   `;
   const messageJSONObject = JSON.parse(jsonString);
   const msg = new Message(messageJSONObject);
-  expect(await msg.edit('Edited message')).toThrow(EditNotOwnMessage);
+  await expect(msg.edit('Edited message')).rejects.toThrow(EditNotOwnMessage);
 
-  // Verify that the object's fields reflect the JSON response
+  // Verify that the object's fields have not changed
   expect(msg.id).toBe('699067552697155634');
   expect(msg.type).toBe(0);
   expect(msg.content).toBe('sugoi');
-  
+  // todo...
 });
