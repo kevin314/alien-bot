@@ -1,6 +1,6 @@
 const nock = require('nock');
 const Message = require('./Message');
-const {EditNotOwnMessage} = require('./errors');
+const {EditNotOwnMessageError} = require('./errors');
 
 test('Message.edit non-empty text, no embed', async () => {
   const replyString = `
@@ -84,10 +84,9 @@ test('Message.edit non-empty text, no embed', async () => {
   expect(scope.isDone()).toBe(true);
 });
 
-
 test('Message.edit non-empty text, no embed, not author', async () => {
   // No API request expected
-  const scope = nock('https://discordapp.com/api');
+  const scope = nock('https://discordapp.com');
 
   const jsonString = `
 {
@@ -116,12 +115,11 @@ test('Message.edit non-empty text, no embed, not author', async () => {
   `;
   const messageJSONObject = JSON.parse(jsonString);
   const msg = new Message(messageJSONObject);
-  await expect(msg.edit('Edited message')).rejects.toThrow(EditNotOwnMessage);
+  await expect(msg.edit('')).rejects.toThrow(EditNotOwnMessageError);
 
   // Verify that the object's fields have not changed
   expect(msg.id).toBe('699067552697155634');
   expect(msg.type).toBe(0);
   expect(msg.content).toBe('sugoi');
   // todo...
-  scope.done();
 });
