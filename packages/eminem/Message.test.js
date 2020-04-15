@@ -115,7 +115,8 @@ test('Message.edit non-empty text, no embed, not author', async () => {
   `;
   const messageJSONObject = JSON.parse(jsonString);
   const msg = new Message(messageJSONObject);
-  await expect(msg.edit('')).rejects.toThrow(EditNotOwnMessageError);
+  await expect(msg.edit('Edited message')).rejects
+      .toThrow(EditNotOwnMessageError);
 
   // Verify that the object's fields have not changed
   expect(msg.id).toBe('699067552697155634');
