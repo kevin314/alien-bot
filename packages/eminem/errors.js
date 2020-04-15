@@ -16,7 +16,16 @@ class EditNotOwnMessageError extends Error {
   }
 }
 
+class EditBlankMessageError extends Error {
+  constructor() {
+    super();
+    this.name = 'EditBlankMessageError';
+    this.message = 'You cannot edit a message to be blank.';
+  }
+}
+
 module.exports = {
   EditDeletedMessageError,
   EditNotOwnMessageError,
+  EditBlankMessageError,
 };

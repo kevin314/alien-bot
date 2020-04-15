@@ -1,8 +1,10 @@
 const nock = require('nock');
 const Message = require('./Message');
-const {EditNotOwnMessageError} = require('./errors');
-const {EditDeletedMessageError} = require('./errors');
-const {EditBlankMessageError} = require('./errors');
+const {
+  EditNotOwnMessageError,
+  EditDeletedMessageError,
+  EditBlankMessageError,
+} = require('./errors');
 
 test('Message constructor', () => {
   const jsonString = `
