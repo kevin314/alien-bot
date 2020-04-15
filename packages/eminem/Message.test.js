@@ -1,23 +1,17 @@
 const nock = require('nock');
 const Message = require('./Message');
-<<<<<<< HEAD
+const User = require('./User');
 const {
   EditNotOwnMessageError,
   EditDeletedMessageError,
   EditBlankMessageError,
 } = require('./errors');
-=======
-const Users = require('./User');
-const {EditNotOwnMessageError} = require('./errors');
-const {EditDeletedMessageError} = require('./errors');
-const {EditBlankMessageError} = require('./errors');
->>>>>>> 2f4ed2e54f6d3014b5eb18d009fa7946bce63019
 
 jest.mock('./User');
 
 test('Message constructor', () => {
   const user = {};
-  Users.mockResolvedValue(user);
+  User.mockReturnValue(user);
 
   const jsonString = `
 {
@@ -67,6 +61,10 @@ test('Message constructor', () => {
   expect(msg.editedTimestamp).toBeNull();
   expect(msg.flags).toBe(0);
   expect(msg.nonce).toBeNull();
+  expect(User.mock.instances.length).toBe(1);
+  expect(User.mock.calls.length).toBe(1);
+  expect(User.mock.calls[0].length).toBe(1);
+  expect(User.mock.calls[0][0]).toEqual(messageJSONObject.author);
 });
 
 test('Message.edit non-empty text, no embed', async () => {
