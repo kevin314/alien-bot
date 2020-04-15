@@ -3,9 +3,10 @@
  */
 class Channel {
   /**
-   * @param {*} jsonObject Discord JSON channel object
+   * @param {Object} jsonObject Discord JSON channel object
+   * @param {Client} client Instance of a Discord API client
    */
-  constructor(jsonObject) {}
+  constructor(jsonObject, client) {}
 
   /**
    * Call Discord's Channel Create Message endpoint.

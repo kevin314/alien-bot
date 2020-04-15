@@ -4,7 +4,7 @@
 class Message {
   /**
    * @param {Object} jsonObject Discord JSON message object
-   * @param {Client} client
+   * @param {Client} client Instance of a Discord API client
    * @param {Channel} channel
    */
   constructor(jsonObject, client, channel) {}
