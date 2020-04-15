@@ -1,10 +1,16 @@
 const nock = require('nock');
 const Message = require('./Message');
+const Users = require('./User');
 const {EditNotOwnMessageError} = require('./errors');
 const {EditDeletedMessageError} = require('./errors');
 const {EditBlankMessageError} = require('./errors');
 
+jest.mock('./User');
+
 test('Message constructor', () => {
+  const user = {};
+  Users.mockResolvedValue(user);
+
   const jsonString = `
 {
   "id": "699076792958320725",
@@ -33,12 +39,15 @@ test('Message constructor', () => {
 }
   `;
   const messageJSONObject = JSON.parse(jsonString);
-  const msg = new Message(messageJSONObject);
-  expect(msg.id).toBe(699076792958320725);
+  const client = {};
+  const channel = {};
+  const msg = new Message(messageJSONObject, client, channel);
+  expect(msg.client).toBe(client);
+  expect(msg.id).toBe('699076792958320725');
   expect(msg.type).toBe(0);
   expect(msg.content).toBe('Hello, World!');
-  expect(msg.channel).toEqual(); // TODO: Mock Channel?
-  expect(msg.author).toEqual(); // TODO: Mock User?
+  expect(msg.channel).toBe(channel);
+  expect(msg.author).toBe(user);
   expect(msg.attachments).toEqual([]); // TODO
   expect(msg.embeds).toEqual([]); // TODO
   expect(msg.mentions).toEqual([]); // TODO
@@ -123,14 +132,10 @@ test('Message.edit non-empty text, no embed', async () => {
 }
   `;
   const messageJSONObject = JSON.parse(jsonString);
-  const msg = new Message(messageJSONObject);
+  const client = {me: {id: '696519593384214528'}};
+  const msg = new Message(messageJSONObject, client, {});
   await msg.edit('Edited message');
-
-  // Verify that the object's fields reflect the JSON response
-  expect(msg.id).toBe('699076792958320725');
-  expect(msg.type).toBe(0);
   expect(msg.content).toBe('Edited message');
-  // todo...
   expect(scope.isDone()).toBe(true);
 });
 
@@ -166,14 +171,10 @@ test('Message.edit empty text, no embed', async () => {
 }
   `;
   const messageJSONObject = JSON.parse(jsonString);
-  const msg = new Message(messageJSONObject);
+  const client = {me: {id: '696519593384214528'}};
+  const msg = new Message(messageJSONObject, client, {});
   await expect(msg.edit('')).rejects.toThrow(EditBlankMessageError);
-
-  // Verify that the object's fields have not changed
-  expect(msg.id).toBe('699076792958320725');
-  expect(msg.type).toBe(0);
   expect(msg.content).toBe('Hello, World!');
-  // todo...
 });
 
 test('Message.edit only whitespaces/newlines, no embed', async () => {
@@ -208,14 +209,10 @@ test('Message.edit only whitespaces/newlines, no embed', async () => {
 }
   `;
   const messageJSONObject = JSON.parse(jsonString);
-  const msg = new Message(messageJSONObject);
+  const client = {me: {id: '696519593384214528'}};
+  const msg = new Message(messageJSONObject, client, {});
   await expect(msg.edit(' \n\t')).rejects.toThrow(EditBlankMessageError);
-
-  // Verify that the object's fields have not changed
-  expect(msg.id).toBe('699076792958320725');
-  expect(msg.type).toBe(0);
   expect(msg.content).toBe('Hello, World!');
-  // todo...
 });
 
 test('Message.edit deleted message, no embed', async () => {
@@ -250,17 +247,12 @@ test('Message.edit deleted message, no embed', async () => {
 }
   `;
   const messageJSONObject = JSON.parse(jsonString);
-  const msg = new Message(messageJSONObject);
+  const client = {me: {id: '696519593384214528'}};
+  const msg = new Message(messageJSONObject, client, {});
   msg.deleted = true;
   await expect(msg.edit('Edited message')).rejects
       .toThrow(EditDeletedMessageError);
-
-  // Verify that the object's fields have not changed except for deleted flag
-  expect(msg.id).toBe('699076792958320725');
-  expect(msg.type).toBe(0);
   expect(msg.content).toBe('Hello, World!');
-  expect(msg.deleted).toBe(true);
-  // todo...
 });
 
 test('Message.edit non-empty text, no embed, not author', async () => {
@@ -293,13 +285,9 @@ test('Message.edit non-empty text, no embed, not author', async () => {
 }
   `;
   const messageJSONObject = JSON.parse(jsonString);
-  const msg = new Message(messageJSONObject);
+  const client = {me: {id: '696519593384214528'}};
+  const msg = new Message(messageJSONObject, client, {});
   await expect(msg.edit('Edited message')).rejects
       .toThrow(EditNotOwnMessageError);
-
-  // Verify that the object's fields have not changed
-  expect(msg.id).toBe('699067552697155634');
-  expect(msg.type).toBe(0);
   expect(msg.content).toBe('sugoi');
-  // todo...
 });
