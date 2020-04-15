@@ -21,11 +21,9 @@ class Message {
   delete() {}
 
   /**
-   * Send a message to the same channel of this message.
-   * @param {String} message Message to be sent
-   * @param {String} filepath Path to a local file
+   * @see {@link Channel.prototype.send}
    */
-  reply(message, filepath) {}
+  async reply(...args) {}
 }
 
 module.exports = Message;
