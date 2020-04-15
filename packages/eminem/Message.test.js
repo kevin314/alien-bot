@@ -1,6 +1,8 @@
 const nock = require('nock');
 const Message = require('./Message');
 const {EditNotOwnMessageError} = require('./errors');
+const {EditDeletedMessageError} = require('./errors');
+const {EditBlankMessageError} = require('./errors');
 
 test('Message constructor', () => {
   const jsonString = `
@@ -130,6 +132,135 @@ test('Message.edit non-empty text, no embed', async () => {
   expect(msg.content).toBe('Edited message');
   // todo...
   expect(scope.isDone()).toBe(true);
+});
+
+test('Message.edit empty text, no embed', async () => {
+  // No API request expected
+  const scope = nock('https://discordapp.com'); // eslint-disable-line no-unused-vars
+
+  const jsonString = `
+ {
+  "id": "699076792958320725",
+  "type": 0,
+  "content": "Hello, World!",
+  "channel_id": "696525324451577939",
+  "author": {
+    "id": "696519593384214528",
+    "username": "Button",
+    "avatar": null,
+    "discriminator": "8259",
+    "public_flags": 0,
+    "bot": true
+  },
+  "attachments": [],
+  "embeds": [],
+  "mentions": [],
+  "mention_roles": [],
+  "pinned": false,
+  "mention_everyone": false,
+  "tts": false,
+  "timestamp": "2020-04-13T02:01:35.660000+00:00",
+  "edited_timestamp": null,
+  "flags": 0,
+  "nonce": null
+}
+  `;
+  const messageJSONObject = JSON.parse(jsonString);
+  const msg = new Message(messageJSONObject);
+  await expect(msg.edit('')).rejects.toThrow(EditBlankMessageError);
+
+  // Verify that the object's fields have not changed
+  expect(msg.id).toBe('699076792958320725');
+  expect(msg.type).toBe(0);
+  expect(msg.content).toBe('Hello, World!');
+  // todo...
+});
+
+test('Message.edit only whitespaces/newlines, no embed', async () => {
+  // No API request expected
+  const scope = nock('https://discordapp.com'); // eslint-disable-line no-unused-vars
+
+  const jsonString = `
+ {
+  "id": "699076792958320725",
+  "type": 0,
+  "content": "Hello, World!",
+  "channel_id": "696525324451577939",
+  "author": {
+    "id": "696519593384214528",
+    "username": "Button",
+    "avatar": null,
+    "discriminator": "8259",
+    "public_flags": 0,
+    "bot": true
+  },
+  "attachments": [],
+  "embeds": [],
+  "mentions": [],
+  "mention_roles": [],
+  "pinned": false,
+  "mention_everyone": false,
+  "tts": false,
+  "timestamp": "2020-04-13T02:01:35.660000+00:00",
+  "edited_timestamp": null,
+  "flags": 0,
+  "nonce": null
+}
+  `;
+  const messageJSONObject = JSON.parse(jsonString);
+  const msg = new Message(messageJSONObject);
+  await expect(msg.edit(' \n\t')).rejects.toThrow(EditBlankMessageError);
+
+  // Verify that the object's fields have not changed
+  expect(msg.id).toBe('699076792958320725');
+  expect(msg.type).toBe(0);
+  expect(msg.content).toBe('Hello, World!');
+  // todo...
+});
+
+test('Message.edit deleted message, no embed', async () => {
+  // No API request expected
+  const scope = nock('https://discordapp.com'); // eslint-disable-line no-unused-vars
+
+  const jsonString = `
+ {
+  "id": "699076792958320725",
+  "type": 0,
+  "content": "Hello, World!",
+  "channel_id": "696525324451577939",
+  "author": {
+    "id": "696519593384214528",
+    "username": "Button",
+    "avatar": null,
+    "discriminator": "8259",
+    "public_flags": 0,
+    "bot": true
+  },
+  "attachments": [],
+  "embeds": [],
+  "mentions": [],
+  "mention_roles": [],
+  "pinned": false,
+  "mention_everyone": false,
+  "tts": false,
+  "timestamp": "2020-04-13T02:01:35.660000+00:00",
+  "edited_timestamp": null,
+  "flags": 0,
+  "nonce": null
+}
+  `;
+  const messageJSONObject = JSON.parse(jsonString);
+  const msg = new Message(messageJSONObject);
+  msg.deleted = true;
+  await expect(msg.edit('Edited message')).rejects
+      .toThrow(EditDeletedMessageError);
+
+  // Verify that the object's fields have not changed except for deleted flag
+  expect(msg.id).toBe('699076792958320725');
+  expect(msg.type).toBe(0);
+  expect(msg.content).toBe('Hello, World!');
+  expect(msg.deleted).toBe(true);
+  // todo...
 });
 
 test('Message.edit non-empty text, no embed, not author', async () => {
