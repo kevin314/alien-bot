@@ -2,6 +2,54 @@ const nock = require('nock');
 const Message = require('./Message');
 const {EditNotOwnMessageError} = require('./errors');
 
+test('Message constructor', () => {
+  const jsonString = `
+{
+  "id": "699076792958320725",
+  "type": 0,
+  "content": "Hello, World!",
+  "channel_id": "696525324451577939",
+  "author": {
+    "id": "696519593384214528",
+    "username": "Button",
+    "avatar": null,
+    "discriminator": "8259",
+    "public_flags": 0,
+    "bot": true
+  },
+  "attachments": [],
+  "embeds": [],
+  "mentions": [],
+  "mention_roles": [],
+  "pinned": false,
+  "mention_everyone": false,
+  "tts": false,
+  "timestamp": "2020-04-13T02:01:35.660000+00:00",
+  "edited_timestamp": null,
+  "flags": 0,
+  "nonce": null
+}
+  `;
+  const messageJSONObject = JSON.parse(jsonString);
+  const msg = new Message(messageJSONObject);
+  expect(msg.id).toBe(699076792958320725);
+  expect(msg.type).toBe(0);
+  expect(msg.content).toBe('Hello, World!');
+  expect(msg.channel).toEqual(); // TODO: Mock Channel?
+  expect(msg.author).toEqual(); // TODO: Mock User?
+  expect(msg.attachments).toEqual([]); // TODO
+  expect(msg.embeds).toEqual([]); // TODO
+  expect(msg.mentions).toEqual([]); // TODO
+  expect(msg.mentionRoles).toEqual([]); // TODO
+  expect(msg.pinned).toBe(false);
+  expect(msg.mentionEveryone).toBe(false);
+  expect(msg.tts).toBe(false);
+  expect(msg.timestamp).toBe(Date.parse('2020-04-13T02:01:35.660000+00:00'));
+  expect(msg.editedTimestamp).toBeNull();
+  expect(msg.flags).toBe(0);
+  expect(msg.nonce).toBeNull();
+});
+
 test('Message.edit non-empty text, no embed', async () => {
   const replyString = `
 {
