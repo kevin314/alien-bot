@@ -130,7 +130,7 @@ test('Message constructor', () => {
 });
 
 describe('Message.prototype.edit', () => {
-  test('Message.edit non-empty text, no embed', async () => {
+  test('non-empty text, no embed', async () => {
     const scope = nock('https://discordapp.com/api', {
       reqheaders: {
         authorization: /Bot \S+$/,
@@ -154,7 +154,7 @@ describe('Message.prototype.edit', () => {
     expect(scope.isDone()).toBe(true);
   });
 
-  test('Message.edit empty text, no embed', async () => {
+  test('empty text, no embed', async () => {
     // Throws error if a request is made
     const scope = nock('https://discordapp.com'); // eslint-disable-line no-unused-vars
 
@@ -165,7 +165,7 @@ describe('Message.prototype.edit', () => {
     expect(msg.content).toBe('Hello, World!');
   });
 
-  test('Message.edit only whitespaces/newlines, no embed', async () => {
+  test('only whitespaces/newlines, no embed', async () => {
     // Throws error if a request is made
     const scope = nock('https://discordapp.com'); // eslint-disable-line no-unused-vars
 
@@ -176,7 +176,7 @@ describe('Message.prototype.edit', () => {
     expect(msg.content).toBe('Hello, World!');
   });
 
-  test('Message.edit deleted message, no embed', async () => {
+  test('deleted message, no embed', async () => {
     // Throws error if a request is made
     const scope = nock('https://discordapp.com'); // eslint-disable-line no-unused-vars
 
@@ -189,7 +189,7 @@ describe('Message.prototype.edit', () => {
     expect(msg.content).toBe('Hello, World!');
   });
 
-  test('Message.edit non-empty text, no embed, not author', async () => {
+  test('non-empty text, no embed, not author', async () => {
     // Throws error if a request is made
     const scope = nock('https://discordapp.com'); // eslint-disable-line no-unused-vars
 
