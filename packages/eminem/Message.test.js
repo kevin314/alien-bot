@@ -5,6 +5,7 @@ const {
   EditNotOwnMessageError,
   EditDeletedMessageError,
   EditBlankMessageError,
+  DeleteDeletedMessageError,
 } = require('./errors');
 
 jest.mock('./User');
@@ -130,7 +131,7 @@ test('Message constructor', () => {
 });
 
 describe('Message.prototype.edit', () => {
-  test('non-empty text, no embed', async () => {
+  test('Message.edit non-empty text, no embed', async () => {
     const scope = nock('https://discordapp.com/api', {
       reqheaders: {
         authorization: /Bot \S+$/,
@@ -154,7 +155,7 @@ describe('Message.prototype.edit', () => {
     expect(scope.isDone()).toBe(true);
   });
 
-  test('empty text, no embed', async () => {
+  test('Message.edit empty text, no embed', async () => {
     // Throws error if a request is made
     const scope = nock('https://discordapp.com'); // eslint-disable-line no-unused-vars
 
@@ -165,7 +166,7 @@ describe('Message.prototype.edit', () => {
     expect(msg.content).toBe('Hello, World!');
   });
 
-  test('only whitespaces/newlines, no embed', async () => {
+  test('Message.edit only whitespaces/newlines, no embed', async () => {
     // Throws error if a request is made
     const scope = nock('https://discordapp.com'); // eslint-disable-line no-unused-vars
 
@@ -176,7 +177,7 @@ describe('Message.prototype.edit', () => {
     expect(msg.content).toBe('Hello, World!');
   });
 
-  test('deleted message, no embed', async () => {
+  test('Message.edit deleted message, no embed', async () => {
     // Throws error if a request is made
     const scope = nock('https://discordapp.com'); // eslint-disable-line no-unused-vars
 
@@ -189,7 +190,7 @@ describe('Message.prototype.edit', () => {
     expect(msg.content).toBe('Hello, World!');
   });
 
-  test('non-empty text, no embed, not author', async () => {
+  test('Message.edit non-empty text, no embed, not author', async () => {
     // Throws error if a request is made
     const scope = nock('https://discordapp.com'); // eslint-disable-line no-unused-vars
 
@@ -233,27 +234,33 @@ describe('Message.prototype.reply', () => {
 });
 
 describe('Message.prototype.delete', () => {
-  test('Message.delete non-empty message', async () => {
+  test('Not deleted message', async () => {
     const scope = nock('https://discordapp.com/api', {
       reqheaders: {
         authorization: /Bot \S+$/,
       },
     })
         .delete('/channels/696525324451577939/messages/699076792958320725')
-        .reply(204, JSON.parse(botEditedMsg), {
-          'content-type': 'application/json',
-          'date': 'Mon, 13 Apr 2020 02:04:41 GMT',
-          'x-ratelimit-bucket': '80c17d2f203122d936070c88c8d10f33',
-          'x-ratelimit-limit': 5,
-          'x-ratelimit-remaining': 4,
-          'x-ratelimit-reset': 1586743487,
-        });
+        .reply(204);
+    const messageJSONObject = JSON.parse(botOriginalMsg);
+    const client = {me: {id: '696519593384214528'}};
+    const msg = new Message(messageJSONObject, client, {});
+    await msg.delete;
+    expect(msg.content).toBe('Hello World!');
+    expect(msg.deleted).toBe(true);
+    expect(scope.isDone()).toBe(true);
+  });
+
+  test('Deleted message', async () => {
+    // Throws error if a request is made
+    const scope = nock('https://discordapp.com'); // eslint-disable-line no-unused-vars
 
     const messageJSONObject = JSON.parse(botOriginalMsg);
     const client = {me: {id: '696519593384214528'}};
     const msg = new Message(messageJSONObject, client, {});
-    await msg.edit('Edited message');
-    expect(msg.content).toBe('Edited message');
-    expect(scope.isDone()).toBe(true);
+    msg.deleted = true;
+    await expect(msg.delete).rejects
+        .toThrow(DeleteDeletedMessageError);
+    expect(msg.content).toBe('Hello World!');
   });
 });
