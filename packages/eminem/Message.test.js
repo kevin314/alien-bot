@@ -107,9 +107,9 @@ test('Message constructor', () => {
   const channel = {};
   const msg = new Message(messageJSONObject, client, channel);
   expect(msg.client).toBe(client);
-  expect(msg.id).toBe('699076792958320725');
-  expect(msg.type).toBe(0);
-  expect(msg.content).toBe('Hello, World!');
+  expect(msg.id).toBe(messageJSONObject.id);
+  expect(msg.type).toBe(messageJSONObject.type);
+  expect(msg.content).toBe(messageJSONObject.content);
   expect(msg.channel).toBe(channel);
   expect(msg.author).toBe(user);
   expect(msg.attachments).toEqual([]); // TODO
@@ -232,4 +232,28 @@ describe('Message.prototype.reply', () => {
   });
 });
 
-describe('Message.prototype.delete', () => {});
+describe('Message.prototype.delete', () => {
+  test('Message.delete non-empty message', async () => {
+    const scope = nock('https://discordapp.com/api', {
+      reqheaders: {
+        authorization: /Bot \S+$/,
+      },
+    })
+        .delete('/channels/696525324451577939/messages/699076792958320725')
+        .reply(204, JSON.parse(botEditedMsg), {
+          'content-type': 'application/json',
+          'date': 'Mon, 13 Apr 2020 02:04:41 GMT',
+          'x-ratelimit-bucket': '80c17d2f203122d936070c88c8d10f33',
+          'x-ratelimit-limit': 5,
+          'x-ratelimit-remaining': 4,
+          'x-ratelimit-reset': 1586743487,
+        });
+
+    const messageJSONObject = JSON.parse(botOriginalMsg);
+    const client = {me: {id: '696519593384214528'}};
+    const msg = new Message(messageJSONObject, client, {});
+    await msg.edit('Edited message');
+    expect(msg.content).toBe('Edited message');
+    expect(scope.isDone()).toBe(true);
+  });
+});

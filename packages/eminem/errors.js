@@ -24,8 +24,17 @@ class EditBlankMessageError extends Error {
   }
 }
 
+class DeleteDeletedMessageError extends Error {
+  constructor() {
+    super();
+    this.name = 'DeleteDeletedMessageError';
+    this.message = 'You cannot delete a message that has already been deleted.';
+  }
+}
+
 module.exports = {
   EditDeletedMessageError,
   EditNotOwnMessageError,
   EditBlankMessageError,
+  DeleteDeletedMessageError,
 };
