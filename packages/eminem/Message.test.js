@@ -22,7 +22,13 @@ const botOriginalMsg = `
     "bot": true
   },
   "attachments": [],
-  "embeds": [],
+  "embeds": [
+    {
+      "type": "rich",
+      "title": "Hello, Embed!",
+      "description": "This is an embedded message."
+    }
+  ],
   "mentions": [],
   "mention_roles": [],
   "pinned": false,
@@ -93,7 +99,7 @@ afterAll(() => {
 });
 
 describe('Message.prototype.edit', () => {
-  test('Message.edit non-empty text, no embed', async () => {
+  test('Message.edit non-empty text, include embed', async () => {
     const scope = nock('https://discordapp.com/api', {
       reqheaders: {
         authorization: /Bot \S+$/,
