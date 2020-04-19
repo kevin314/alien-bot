@@ -1,14 +1,11 @@
 const nock = require('nock');
 const Message = require('./Message');
-const User = require('./User');
 const {
   EditNotOwnMessageError,
   EditDeletedMessageError,
   EditBlankMessageError,
   DeleteDeletedMessageError,
 } = require('./errors');
-
-jest.mock('./User');
 
 const botOriginalMsg = `
 {
@@ -93,41 +90,6 @@ const otherUserMsg = `
 
 afterAll(() => {
   nock.restore();
-});
-
-test('Message constructor', () => {
-  // Throws error if a request is made
-  const scope = nock('https://discordapp.com'); // eslint-disable-line no-unused-vars
-
-  const user = {};
-  User.mockReturnValue(user);
-
-  const jsonString = botOriginalMsg;
-  const messageJSONObject = JSON.parse(jsonString);
-  const client = {};
-  const channel = {};
-  const msg = new Message(messageJSONObject, client, channel);
-  expect(msg.client).toBe(client);
-  expect(msg.id).toBe(messageJSONObject.id);
-  expect(msg.type).toBe(messageJSONObject.type);
-  expect(msg.content).toBe(messageJSONObject.content);
-  expect(msg.channel).toBe(channel);
-  expect(msg.author).toBe(user);
-  expect(msg.attachments).toEqual([]); // TODO
-  expect(msg.embeds).toEqual([]); // TODO
-  expect(msg.mentions).toEqual([]); // TODO
-  expect(msg.mentionRoles).toEqual([]); // TODO
-  expect(msg.pinned).toBe(false);
-  expect(msg.mentionEveryone).toBe(false);
-  expect(msg.tts).toBe(false);
-  expect(msg.timestamp).toBe(Date.parse('2020-04-13T02:01:35.660000+00:00'));
-  expect(msg.editedTimestamp).toBeNull();
-  expect(msg.flags).toBe(0);
-  expect(msg.nonce).toBeNull();
-  expect(User.mock.instances.length).toBe(1);
-  expect(User.mock.calls.length).toBe(1);
-  expect(User.mock.calls[0].length).toBe(1);
-  expect(User.mock.calls[0][0]).toEqual(messageJSONObject.author);
 });
 
 describe('Message.prototype.edit', () => {
