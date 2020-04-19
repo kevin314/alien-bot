@@ -145,25 +145,19 @@ const messageDeleteGateway = `\
 }
 `;
 
-afterAll(() => {
-  nock.restore();
-});
-
-describe('Client.prototype.login', () => {
-  test('successful, event handlers', async () => {
-    // Mock Discord Gateway API
-    const wss = new WebSocket.Server({port: 8080});
-    wss.mock = {};
-    wss.on('connection', (ws) => {
-      wss.mock.connected = true;
-      wss.mock.ws = ws;
-      ws.on('message', (message) => {
-        const json = JSON.parse(message);
-        if (json.op === 2) {
-          wss.mock.identifyMessage = json;
-        }
-      });
-      ws.send(`\
+// Mock Discord Gateway API
+const wss = new WebSocket.Server({port: 8080}); // causes bug
+wss.mock = {};
+wss.on('connection', (ws) => {
+  wss.mock.connected = true;
+  wss.mock.ws = ws;
+  ws.on('message', (message) => {
+    const json = JSON.parse(message);
+    if (json.op === 2) {
+      wss.mock.identifyMessage = json;
+    }
+  });
+  ws.send(`\
 {
   "op": 10,
   "d": {
@@ -171,9 +165,16 @@ describe('Client.prototype.login', () => {
   }
 }
 `,
-      );
-    });
+  );
+});
 
+afterAll(() => {
+  nock.restore();
+  wss.close();
+});
+
+describe('Client.prototype.login', () => {
+  test('successful, event handlers', async () => {
     // Mock Get Gateway HTTP endpoint
     const scope = nock('https://discordapp.com/api', {
       reqheaders: {
