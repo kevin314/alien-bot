@@ -1,5 +1,8 @@
 /* eslint-disable require-jsdoc */
 
+/**
+ * Message errors
+ */
 class EditDeletedMessageError extends Error {
   constructor() {
     super();
@@ -32,9 +35,21 @@ class DeleteDeletedMessageError extends Error {
   }
 }
 
+/**
+ * Channel errors
+ */
+class CreateBlankMessageError extends Error {
+  constructor() {
+    super();
+    this.name = 'CreateBlankMessageError';
+    this.message = 'You cannot create a blank message';
+  }
+}
+
 module.exports = {
   EditDeletedMessageError,
   EditNotOwnMessageError,
   EditBlankMessageError,
   DeleteDeletedMessageError,
+  CreateBlankMessageError,
 };
