@@ -213,7 +213,7 @@ describe('Message.prototype.delete', () => {
     const messageJSONObject = JSON.parse(botOriginalMsg);
     const client = {me: {id: '696519593384214528'}};
     const msg = new Message(messageJSONObject, client, {});
-    await msg.delete;
+    await msg.delete();
     expect(msg.content).toBe('Hello World!');
     expect(msg.deleted).toBe(true);
     expect(scope.isDone()).toBe(true);
@@ -227,7 +227,7 @@ describe('Message.prototype.delete', () => {
     const client = {me: {id: '696519593384214528'}};
     const msg = new Message(messageJSONObject, client, {});
     msg.deleted = true;
-    await expect(msg.delete).rejects
+    await expect(msg.delete()).rejects
         .toThrow(DeleteDeletedMessageError);
     expect(msg.content).toBe('Hello World!');
   });
