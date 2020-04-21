@@ -128,7 +128,7 @@ describe('Message.prototype.edit', () => {
 
     const messageJSONObject = JSON.parse(botOriginalMsg);
     const client = {me: {id: '696519593384214528'}};
-    const msg = new Message(messageJSONObject, client, {});
+    const msg = new Message(messageJSONObject, client, channel);
     await msg.edit('Edited message', embedObject);
     expect(msg.content).toBe('Edited message');
     expect(scope.isDone()).toBe(true);
@@ -140,7 +140,7 @@ describe('Message.prototype.edit', () => {
 
     const messageJSONObject = JSON.parse(botOriginalMsg);
     const client = {me: {id: '696519593384214528'}};
-    const msg = new Message(messageJSONObject, client, {});
+    const msg = new Message(messageJSONObject, client, channel);
     await expect(msg.edit('')).rejects.toThrow(EditBlankMessageError);
     expect(msg.content).toBe('Hello, World!');
   });
@@ -151,7 +151,7 @@ describe('Message.prototype.edit', () => {
 
     const messageJSONObject = JSON.parse(botOriginalMsg);
     const client = {me: {id: '696519593384214528'}};
-    const msg = new Message(messageJSONObject, client, {});
+    const msg = new Message(messageJSONObject, client, channel);
     await expect(msg.edit(' \n\t')).rejects.toThrow(EditBlankMessageError);
     expect(msg.content).toBe('Hello, World!');
   });
@@ -162,7 +162,7 @@ describe('Message.prototype.edit', () => {
 
     const messageJSONObject = JSON.parse(botOriginalMsg);
     const client = {me: {id: '696519593384214528'}};
-    const msg = new Message(messageJSONObject, embedObject, client, channel);
+    const msg = new Message(messageJSONObject, client, channel);
     msg.deleted = true;
     await expect(msg.edit('Edited message')).rejects
         .toThrow(EditDeletedMessageError);
@@ -176,7 +176,7 @@ describe('Message.prototype.edit', () => {
 
     const messageJSONObject = JSON.parse(otherUserMsg);
     const client = {me: {id: '696519593384214528'}};
-    const msg = new Message(messageJSONObject, {}, client, channel);
+    const msg = new Message(messageJSONObject, client, channel);
     await expect(msg.edit('Edited message', {})).rejects
         .toThrow(EditNotOwnMessageError);
     expect(msg.content).toBe('sugoi');
@@ -187,7 +187,7 @@ describe('Message.prototype.reply', () => {
   test('1 parameter', async () => {
     const messageJSONObject = JSON.parse(botOriginalMsg);
     const channel = {send: jest.fn()};
-    const msg = new Message(messageJSONObject, embedObject, client, channel);
+    const msg = new Message(messageJSONObject, client, channel);
     msg.channel = channel;
     await msg.reply('Hello there');
     expect(channel.send.mock.calls.length).toBe(1);
@@ -198,7 +198,7 @@ describe('Message.prototype.reply', () => {
   test('2 parameters', async () => {
     const messageJSONObject = JSON.parse(botOriginalMsg);
     const channel = {send: jest.fn()};
-    const msg = new Message(messageJSONObject, embedObject, client, channel);
+    const msg = new Message(messageJSONObject, client, channel);
     msg.channel = channel;
     await msg.reply('Hello there', replyEmbedObject);
     expect(channel.send.mock.calls.length).toBe(1);
@@ -210,7 +210,7 @@ describe('Message.prototype.reply', () => {
   test('3 parameters', async () => {
     const messageJSONObject = JSON.parse(botOriginalMsg);
     const channel = {send: jest.fn()};
-    const msg = new Message(messageJSONObject, embedObject, cclient, channel);
+    const msg = new Message(messageJSONObject, client, channel);
     msg.channel = channel;
     await msg.reply(
         'Hello there', replyEmbedObject,
@@ -237,7 +237,7 @@ describe('Message.prototype.delete', () => {
         .reply(204);
     const messageJSONObject = JSON.parse(botOriginalMsg);
     const client = {me: {id: '696519593384214528'}};
-    const msg = new Message(messageJSONObject, embedObject, client, channel);
+    const msg = new Message(messageJSONObject, client, channel);
     await msg.delete();
     expect(msg.content).toBe('Hello World!');
     expect(msg.embed).toEqual(embedObject);
@@ -251,7 +251,7 @@ describe('Message.prototype.delete', () => {
 
     const messageJSONObject = JSON.parse(botOriginalMsg);
     const client = {me: {id: '696519593384214528'}};
-    const msg = new Message(messageJSONObject, {}, client, channel);
+    const msg = new Message(messageJSONObject, client, channel);
     msg.deleted = true;
     await expect(msg.delete()).rejects
         .toThrow(DeleteDeletedMessageError);
