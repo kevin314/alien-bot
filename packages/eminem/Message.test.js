@@ -39,7 +39,13 @@ const botOriginalMsg = `
   "flags": 0,
   "nonce": null
 }`;
-
+const embedObject = JSON.parse(`
+{
+  "type": "rich",
+  "title": "Hello, Embed!",
+  "description": "This is an embedded message."
+}
+`);
 const botEditedMsg = `
 {
   "id": "699076792958320725",
@@ -67,7 +73,6 @@ const botEditedMsg = `
   "nonce": null
 }
 `;
-
 const otherUserMsg = `
 {
   "id": "699067552697155634",
@@ -93,6 +98,12 @@ const otherUserMsg = `
   "flags": 0
 }
 `;
+const replyEmbedObject = JSON.parse(`
+{
+  "type": "rich",
+  "title": "Reply, Embed!",
+  "description": "This is an reply embed."
+}`);
 
 afterAll(() => {
   nock.restore();
@@ -118,7 +129,7 @@ describe('Message.prototype.edit', () => {
     const messageJSONObject = JSON.parse(botOriginalMsg);
     const client = {me: {id: '696519593384214528'}};
     const msg = new Message(messageJSONObject, client, {});
-    await msg.edit('Edited message');
+    await msg.edit('Edited message', embedObject);
     expect(msg.content).toBe('Edited message');
     expect(scope.isDone()).toBe(true);
   });
@@ -145,17 +156,18 @@ describe('Message.prototype.edit', () => {
     expect(msg.content).toBe('Hello, World!');
   });
 
-  test('deleted message, no embed', async () => {
+  test('deleted message, embed', async () => {
     // Throws error if a request is made
     const scope = nock('https://discordapp.com'); // eslint-disable-line no-unused-vars
 
     const messageJSONObject = JSON.parse(botOriginalMsg);
     const client = {me: {id: '696519593384214528'}};
-    const msg = new Message(messageJSONObject, client, {});
+    const msg = new Message(messageJSONObject, embedObject, client, channel);
     msg.deleted = true;
     await expect(msg.edit('Edited message')).rejects
         .toThrow(EditDeletedMessageError);
     expect(msg.content).toBe('Hello, World!');
+    expect(msg.embed).toEqual(embedObject);
   });
 
   test('non-empty text, no embed, not author', async () => {
@@ -164,8 +176,8 @@ describe('Message.prototype.edit', () => {
 
     const messageJSONObject = JSON.parse(otherUserMsg);
     const client = {me: {id: '696519593384214528'}};
-    const msg = new Message(messageJSONObject, client, {});
-    await expect(msg.edit('Edited message')).rejects
+    const msg = new Message(messageJSONObject, {}, client, channel);
+    await expect(msg.edit('Edited message', {})).rejects
         .toThrow(EditNotOwnMessageError);
     expect(msg.content).toBe('sugoi');
   });
@@ -175,7 +187,7 @@ describe('Message.prototype.reply', () => {
   test('1 parameter', async () => {
     const messageJSONObject = JSON.parse(botOriginalMsg);
     const channel = {send: jest.fn()};
-    const msg = new Message(messageJSONObject, {}, channel);
+    const msg = new Message(messageJSONObject, embedObject, client, channel);
     msg.channel = channel;
     await msg.reply('Hello there');
     expect(channel.send.mock.calls.length).toBe(1);
@@ -186,16 +198,29 @@ describe('Message.prototype.reply', () => {
   test('2 parameters', async () => {
     const messageJSONObject = JSON.parse(botOriginalMsg);
     const channel = {send: jest.fn()};
-    const msg = new Message(messageJSONObject, {}, channel);
+    const msg = new Message(messageJSONObject, embedObject, client, channel);
     msg.channel = channel;
-    await msg.reply(
-        'Hello there',
-        'C:\Riot Games\League of Legends\Game\BugSplat.dll',
-    );
+    await msg.reply('Hello there', replyEmbedObject);
     expect(channel.send.mock.calls.length).toBe(1);
     expect(channel.send.mock.calls[0].length).toBe(2);
     expect(channel.send.mock.calls[0][0]).toBe('Hello there');
-    expect(channel.send.mock.calls[0][1]).toBe(
+    expect(channel.send.mock.calls[0][1]).toEqual(replyEmbedObject);
+  });
+
+  test('3 parameters', async () => {
+    const messageJSONObject = JSON.parse(botOriginalMsg);
+    const channel = {send: jest.fn()};
+    const msg = new Message(messageJSONObject, embedObject, cclient, channel);
+    msg.channel = channel;
+    await msg.reply(
+        'Hello there', replyEmbedObject,
+        'C:\Riot Games\League of Legends\Game\BugSplat.dll',
+    );
+    expect(channel.send.mock.calls.length).toBe(1);
+    expect(channel.send.mock.calls[0].length).toBe(3);
+    expect(channel.send.mock.calls[0][0]).toBe('Hello there');
+    expect(channel.send.mock.calls[0][1]).toEqual(replyEmbedObject);
+    expect(channel.send.mock.calls[0][2]).toBe(
         'C:\Riot Games\League of Legends\Game\BugSplat.dll',
     );
   });
@@ -212,9 +237,10 @@ describe('Message.prototype.delete', () => {
         .reply(204);
     const messageJSONObject = JSON.parse(botOriginalMsg);
     const client = {me: {id: '696519593384214528'}};
-    const msg = new Message(messageJSONObject, client, {});
+    const msg = new Message(messageJSONObject, embedObject, client, channel);
     await msg.delete();
     expect(msg.content).toBe('Hello World!');
+    expect(msg.embed).toEqual(embedObject);
     expect(msg.deleted).toBe(true);
     expect(scope.isDone()).toBe(true);
   });
@@ -225,10 +251,11 @@ describe('Message.prototype.delete', () => {
 
     const messageJSONObject = JSON.parse(botOriginalMsg);
     const client = {me: {id: '696519593384214528'}};
-    const msg = new Message(messageJSONObject, client, {});
+    const msg = new Message(messageJSONObject, {}, client, channel);
     msg.deleted = true;
     await expect(msg.delete()).rejects
         .toThrow(DeleteDeletedMessageError);
     expect(msg.content).toBe('Hello World!');
+    expect(msg.embed).toEqual(embedObject);
   });
 });
