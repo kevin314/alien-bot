@@ -36,6 +36,13 @@ const botOriginalMsg = `
   "flags": 0,
   "nonce": null
 }`;
+const embedObject = JSON.parse(`
+{
+  "type": "rich",
+  "title": "Hello, Embed!",
+  "description": "This is an embedded message."
+}
+`);
 const channelJSONString = `
 {
   "id": "696525324451577939",
@@ -64,25 +71,23 @@ describe('Channel.prototype.send', () => {
       },
     })
         .post('/channels/696525324451577939/messages')
-        .reply(200, JSON.parse(botOriginalMsg));
+        .reply(200, botOriginalMsg);
 
     const client = {me: {id: '696519593384214528'}};
     const channel = new Channel(channelJSONString, client, {});
-    const messageJSONObject = JSON
-        .parse(await channel.send('Hello World!',
-            'C:\Riot Games\League of Legends\Game\BugSplat.dll'));
-    const msg = new Message(messageJSONObject, client, {});
+    const msg = await channel.send('Hello World!', embedObject,
+        'C:\Riot Games\League of Legends\Game\BugSplat.dll');
     expect(msg.content).toBe('Hello World!');
     expect(scope.isDone()).toBe(true);
   });
 
-  test('only whitespaces/newlines, empty embed', async () => {
+  test('only whitespaces/newlines, empty embed, no filepath', async () => {
     // Throws error if a request is made
     const scope = nock('https://discordapp.com'); // eslint-disable-line no-unused-vars
 
     const client = {me: {id: '696519593384214528'}};
     const channel = new Channel(channelJSONString, client, {});
-    await expect(channel.send('', '')).rejects
+    await expect(channel.send('', {})).rejects
         .toThrow(CreateBlankMessageError);
   });
 });
