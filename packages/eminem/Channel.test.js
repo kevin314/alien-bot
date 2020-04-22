@@ -63,7 +63,30 @@ afterAll(() => {
 });
 
 describe('Channel.prototype.send', () => {
-  test('Non-empty text, include embed, include filepath', async () => {
+  test('Non-empty text, include embed, no filepath', async () => {
+    const scope = nock('https://discordapp.com/api', {
+      reqheaders: {
+        authorization: /Bot \S+$/,
+      },
+    })
+        .post('/channels/696525324451577939/messages', {
+          content: 'Hello World!',
+          embed: embedObject,
+        })
+        .reply(200, botOriginalMsg);
+
+    const client = {me: {id: '696519593384214528'}};
+    const channel = new Channel(channelJSONObject, client, {});
+    const msg = await channel.send('Hello World!', embedObject);
+    expect(msg.content).toBe('Hello World!');
+    expect(scope.isDone()).toBe(true);
+  });
+
+  test('no text, no embed, filepath', async () => {
+    // TODO: Mock file read and expect the file in the POST body
+  });
+
+  test('whitespace-padded content, no embed, no filepath', async () => {
     const scope = nock('https://discordapp.com/api', {
       reqheaders: {
         authorization: /Bot \S+$/,
@@ -74,8 +97,7 @@ describe('Channel.prototype.send', () => {
 
     const client = {me: {id: '696519593384214528'}};
     const channel = new Channel(channelJSONObject, client, {});
-    const msg = await channel.send('Hello World!', embedObject,
-        'C:\Riot Games\League of Legends\Game\BugSplat.dll');
+    const msg = await channel.send(' \nHello World!\t ', embedObject);
     expect(msg.content).toBe('Hello World!');
     expect(scope.isDone()).toBe(true);
   });
