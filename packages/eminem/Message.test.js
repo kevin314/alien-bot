@@ -110,7 +110,7 @@ afterAll(() => {
 });
 
 describe('Message.prototype.edit', () => {
-  test('Message.edit non-empty text, include embed', async () => {
+  test('non-empty text, include embed', async () => {
     const scope = nock('https://discordapp.com/api', {
       reqheaders: {
         authorization: /Bot \S+$/,
