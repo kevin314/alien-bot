@@ -43,7 +43,7 @@ const embedObject = JSON.parse(`
   "description": "This is an embedded message."
 }
 `);
-const channelJSONString = `
+const channelJSONObject = JSON.parse(`
 {
   "id": "696525324451577939",
   "last_message_id": "701244061142745151",
@@ -57,8 +57,7 @@ const channelJSONString = `
   "nsfw": false,
   "rate_limit_per_user": 0
 }
-`;
-
+`);
 afterAll(() => {
   nock.restore();
 });
@@ -74,7 +73,7 @@ describe('Channel.prototype.send', () => {
         .reply(200, botOriginalMsg);
 
     const client = {me: {id: '696519593384214528'}};
-    const channel = new Channel(channelJSONString, client, {});
+    const channel = new Channel(channelJSONObject, client, {});
     const msg = await channel.send('Hello World!', embedObject,
         'C:\Riot Games\League of Legends\Game\BugSplat.dll');
     expect(msg.content).toBe('Hello World!');
@@ -86,7 +85,7 @@ describe('Channel.prototype.send', () => {
     const scope = nock('https://discordapp.com'); // eslint-disable-line no-unused-vars
 
     const client = {me: {id: '696519593384214528'}};
-    const channel = new Channel(channelJSONString, client, {});
+    const channel = new Channel(channelJSONObject, client, {});
     await expect(channel.send('', {})).rejects
         .toThrow(CreateBlankMessageError);
   });
