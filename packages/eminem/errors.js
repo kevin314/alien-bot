@@ -23,7 +23,7 @@ class EditBlankMessageError extends Error {
   constructor() {
     super();
     this.name = 'EditBlankMessageError';
-    this.message = 'You cannot edit a message to be blank.';
+    this.message = 'You cannot edit a message to have no content and no embed.';
   }
 }
 
@@ -42,7 +42,8 @@ class CreateBlankMessageError extends Error {
   constructor() {
     super();
     this.name = 'CreateBlankMessageError';
-    this.message = 'You cannot create a blank message';
+    this.message =
+      'Your message must contain content, an embed, or a filepath.';
   }
 }
 
