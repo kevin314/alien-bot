@@ -3,7 +3,7 @@
  */
 class User {
   /**
-   * @param {Object} jsonObject Discord JSON user object
+   * @param {Object} userJsonObject Discord JSON user object
    * @param {Client} client Instance of a Discord API client
    */
   constructor(jsonObject, client) {}

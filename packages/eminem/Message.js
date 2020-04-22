@@ -3,7 +3,7 @@
  */
 class Message {
   /**
-   * @param {Object} jsonObject Discord JSON message object
+   * @param {Object} messageJsonObject Discord JSON message object
    * @param {Client} client Instance of a Discord API client
    * @param {Channel} channel
    */
