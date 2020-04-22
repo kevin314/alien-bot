@@ -6,7 +6,7 @@ class User {
    * @param {Object} userJsonObject Discord JSON user object
    * @param {Client} client Instance of a Discord API client
    */
-  constructor(jsonObject, client) {}
+  constructor(userJsonObject, client) {}
 
   /**
    * Create a DM channel and call the channel's send method.

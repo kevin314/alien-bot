@@ -7,7 +7,7 @@ class Message {
    * @param {Client} client Instance of a Discord API client
    * @param {Channel} channel
    */
-  constructor(jsonObject, client, channel) {}
+  constructor(messageJsonObject, client, channel) {}
 
   /**
    * Edit the content of a message.
