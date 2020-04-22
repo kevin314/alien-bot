@@ -156,7 +156,7 @@ describe('Message.prototype.edit', () => {
     expect(msg.content).toBe('Hello, World!');
   });
 
-  test('deleted message, embed', async () => {
+  test('deleted message, no embed', async () => {
     // Throws error if a request is made
     const scope = nock('https://discordapp.com'); // eslint-disable-line no-unused-vars
 
@@ -170,7 +170,7 @@ describe('Message.prototype.edit', () => {
     expect(msg.embed).toEqual(embedObject);
   });
 
-  test('non-empty text, no embed, not author', async () => {
+  test('non-empty text, empty embed, not author', async () => {
     // Throws error if a request is made
     const scope = nock('https://discordapp.com'); // eslint-disable-line no-unused-vars
 
