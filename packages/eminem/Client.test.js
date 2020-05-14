@@ -22,6 +22,9 @@ const getGatewayResponse = `\
 }
 `;
 
+const getUserResponse = `\
+`;
+
 const getChannelResponse = `\
 {
   "id": "696525324451577939",
@@ -36,6 +39,9 @@ const getChannelResponse = `\
   "nsfw": false,
   "rate_limit_per_user": 0
 }
+`;
+
+const getMessageResponse = `\
 `;
 
 const messageCreateGateway = `\
@@ -145,8 +151,23 @@ const messageDeleteGateway = `\
 }
 `;
 
+const messageDeleteBulkGateway = `\
+`;
+
+const messageReactionAddGateway = `\
+`;
+
+const messageReactionRemoveGateway = `\
+`;
+
+const messageReactionRemoveAllGateway = `\
+`;
+
+const messageReactionRemoveEmojiGateway = `\
+`;
+
 // Mock Discord Gateway API
-const wss = new WebSocket.Server({port: 8080}); // causes bug
+const wss = new WebSocket.Server({port: 8080});
 wss.mock = {};
 wss.on('connection', (ws) => {
   wss.mock.connected = true;
@@ -195,6 +216,11 @@ describe('Client.prototype.login', () => {
       'messageCreate',
       'messageUpdate',
       'messageDelete',
+      'messageDeleteBulk',
+      'messageReactionAdd',
+      'messageReactionRemove',
+      'messageReactionRemoveAll',
+      'messageReactionRemoveEmoji',
     ];
     const spies = {};
     for (const event of events) {
@@ -221,8 +247,7 @@ describe('Client.prototype.login', () => {
     expect(spies.messageCreate.mock.calls[0].length).toBe(1);
     expect(spies.messageCreate.mock.calls[0][0] instanceof Message).toBe(true);
     const message = JSON.parse(messageCreateGateway).d;
-    expect(spies.messageCreate.mock.calls[0][0].id).toBe(message.id);
-    expect(spies.messageCreate.mock.calls[0][0].content).toBe(message.content);
+    expect(spies.messageCreate.mock.calls[0][0]).toEqual(new Message(message));
 
     // Message Update
     wss.mock.ws.send(messageUpdateGateway);
@@ -230,21 +255,80 @@ describe('Client.prototype.login', () => {
     expect(spies.messageUpdate.mock.calls[0].length).toBe(1);
     expect(spies.messageUpdate.mock.calls[0][0] instanceof Message).toBe(true);
     const message1 = JSON.parse(messageUpdateGateway).d;
-    expect(spies.messageCreate.mock.calls[0][0].id).toBe(message1.id);
-    expect(spies.messageCreate.mock.calls[0][0].content).toBe(message1.content);
+    expect(spies.messageCreate.mock.calls[0][0]).toEqual(new Message(message1));
 
     // Message Delete
     wss.mock.ws.send(messageDeleteGateway);
     expect(spies.messageDelete.mock.calls.length).toBe(1);
     expect(spies.messageDelete.mock.calls[0].length).toBe(1);
     const message2 = JSON.parse(messageDeleteGateway).d;
-    expect(spies.messageDelete.mock.calls[0][0].id).toBe(message2.id);
-    expect(spies.messageDelete.mock.calls[0][0].channel).toBe(
-        new Channel(JSON.parse(getChannelResponse)),
-    );
-    expect(spies.messageDelete.mock.calls[0][0].guild.id).toBe(
-        '696525324451577936',
-    );
+    expect(spies.messageDelete.mock.calls[0][0]).toMatchObject({
+      id: message2.id,
+      channel: new Channel(JSON.parse(getChannelResponse)),
+    });
+
+    // Message Delete Bulk
+    spies.messageDelete.mockClear();
+    wss.mock.ws.send(messageDeleteBulkGateway);
+    const message3 = JSON.parse(messageDeleteBulkGateway).d;
+    expect(spies.messageDelete.mock.calls.length).toBe(message3.ids.length);
+    for (let i = 0; i < spies.messageDelete.mock.calls.length; i++) {
+      const call = spies.messageDelete.mock.calls[i];
+      expect(call.length).toBe(1);
+      expect(call[0]).toMatchObject({
+        id: message3.ids[i],
+        channel: new Channel(JSON.parse(getChannelResponse)),
+      });
+    }
+
+    // Message Reaction Add
+    wss.mock.ws.send(messageReactionAddGateway);
+    expect(spies.messageReactionAdd.mock.calls.length).toBe(1);
+    expect(spies.messageReactionAdd.mock.calls[0].length).toBe(1);
+    const message4 = JSON.parse(messageReactionAddGateway).d;
+    expect(spies.messageReactionAdd.mock.calls[0][0]).toMatchObject({
+      user: new User(JSON.parse(getUserResponse)),
+      message: new Message(JSON.parse(getMessageResponse)),
+      emoji: {
+        id: message4.emoji.id,
+        name: message4.emoji.name,
+      },
+    });
+
+    // Message Reaction Remove
+    wss.mock.ws.send(messageReactionRemoveGateway);
+    expect(spies.messageReactionRemove.mock.calls.length).toBe(1);
+    expect(spies.messageReactionRemove.mock.calls[0].length).toBe(1);
+    const message5 = JSON.parse(messageReactionRemoveGateway).d;
+    expect(spies.messageReactionRemove.mock.calls[0][0]).toMatchObject({
+      user: new User(JSON.parse(getUserResponse)),
+      message: new Message(JSON.parse(getMessageResponse)),
+      emoji: {
+        id: message5.emoji.id,
+        name: message5.emoji.name,
+      },
+    });
+
+    // Message Reaction Remove All
+    wss.mock.ws.send(messageReactionRemoveAllGateway);
+    expect(spies.messageReactionRemoveAll.mock.calls.length).toBe(1);
+    expect(spies.messageReactionRemoveAll.mock.calls[0].length).toBe(1);
+    expect(spies.messageReactionRemoveAll.mock.calls[0][0]).toMatchObject({
+      message: new Message(JSON.parse(getMessageResponse)),
+    });
+
+    // Message Reaction Remove Emoji
+    wss.mock.ws.send(messageReactionRemoveEmojiGateway);
+    expect(spies.messageReactionRemoveEmoji.mock.calls.length).toBe(1);
+    expect(spies.messageReactionRemoveEmoji.mock.calls[0].length).toBe(1);
+    const message7 = JSON.parse(messageReactionRemoveEmojiGateway).d;
+    expect(spies.messageReactionRemoveEmoji.mock.calls[0][0]).toMatchObject({
+      message: new Message(JSON.parse(getMessageResponse)),
+      emoji: {
+        id: message7.emoji.id,
+        name: message7.emoji.name,
+      },
+    });
 
     expect(scope.isDone()).toBe(true);
   });
