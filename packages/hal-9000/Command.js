@@ -11,10 +11,9 @@ class Command {
 
   /**
    * Call Discord's Channel Create Message endpoint.
-   * @param {String} text Message to be sent
-   * @param {String} filepath Path to a local file
+   * @param {Command} command
    */
-  send(text, filepath) {}
+  addCommand(command) {}
 }
 
 module.exports = Command;
