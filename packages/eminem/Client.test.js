@@ -23,6 +23,13 @@ const getGatewayResponse = `\
 `;
 
 const getUserResponse = `\
+{
+  "id": "195389898784636928",
+  "username": "Keane",
+  "avatar": "f4e1049a56f1a48714ec87dbea0d9c13",
+  "discriminator": "8251",
+  "public_flags": 0
+}
 `;
 
 const getChannelResponse = `\
@@ -42,6 +49,45 @@ const getChannelResponse = `\
 `;
 
 const getMessageResponse = `\
+{
+  "id": "699076792958320725",
+  "type": 0,
+  "content": "Hello, World!",
+  "channel_id": "696525324451577939",
+  "author": {
+    "id": "696519593384214528",
+    "username": "Button",
+    "avatar": null,
+    "discriminator": "8259",
+    "public_flags": 0,
+    "bot": true
+  },
+  "attachments": [],
+  "embeds": [
+    {
+      "type": "rich",
+      "title": "Hello, Embed!",
+      "description": "This is an embedded message."
+    }
+  ],
+  "mentions": [],
+  "mention_roles": [],
+  "pinned": false,
+  "mention_everyone": false,
+  "tts": false,
+  "timestamp": "2020-04-13T02:01:35.660000+00:00",
+  "edited_timestamp": null,
+  "flags": 0,
+  "nonce": null,
+  "guild_id":"696525324451577936",
+  "member": {
+    "roles":[],
+    "mute":false,
+    "joined_at": "2020-04-06T01:03:07.384000+00:00",
+    "hoisted_role": null,
+    "deaf": false
+  }
+}
 `;
 
 const messageCreateGateway = `\
@@ -152,18 +198,103 @@ const messageDeleteGateway = `\
 `;
 
 const messageDeleteBulkGateway = `\
+{
+  "t": "MESSAGE_DELETE_BULK",
+  "s": 3,
+  "op": 0,
+  "d": {
+    "ids": [
+      "710716998879019068",
+      "710716997444304946",
+      "710716996031086674",
+      "710716992910262324",
+      "710716992277184542",
+      "710716987663450113",
+      "710716987029848114"
+    ],
+    "channel_id": "696525324451577939",
+    "guild_id": "696525324451577936"
+  }
+}
 `;
 
 const messageReactionAddGateway = `\
+{
+  "t": "MESSAGE_REACTION_ADD",
+  "s": 3,
+  "op": 0,
+  "d": {
+    "user_id": "195389898784636928",
+    "message_id": "709987531562942484",
+    "member": {
+      "user": {
+        "username": "Keane",
+        "id": "195389898784636928",
+        "discriminator": "8251",
+        "avatar": "f4e1049a56f1a48714ec87dbea0d9c13"
+      },
+      "roles": [],
+      "mute": false,
+      "joined_at": "2020-04-06T01:03:07.384000+00:00",
+      "hoisted_role": null,
+      "deaf": false
+    },
+    "emoji": {
+      "name": "🤨",
+      "id": null
+    },
+    "channel_id": "696525324451577939",
+    "guild_id": "696525324451577936"
+  }
+}
 `;
 
 const messageReactionRemoveGateway = `\
+{
+  "t": "MESSAGE_REACTION_REMOVE",
+  "s": 4,
+  "op": 0,
+  "d": {
+    "user_id": "195389898784636928",
+    "message_id": "709987531562942484",
+    "emoji": {
+      "name": "🤨",
+      "id": null
+    },
+    "channel_id": "696525324451577939",
+    "guild_id": "696525324451577936"
+  }
+}
 `;
 
 const messageReactionRemoveAllGateway = `\
+{
+  "t": "MESSAGE_REACTION_REMOVE_ALL",
+  "s": 3,
+  "op": 0,
+  "d": {
+    "message_id": "709987531562942484",
+    "channel_id": "696525324451577939",
+    "guild_id": "696525324451577936"
+  }
+}
 `;
 
 const messageReactionRemoveEmojiGateway = `\
+{
+  "t": "MESSAGE_REACTION_REMOVE_EMOJI",
+  "s": 3,
+  "op": 0,
+  "d": {
+    "message_id": "709987531562942484",
+    "emoji": {
+      "name": "😳",
+      "id": null
+    },
+    "channel_id": "696525324451577939",
+    "guild_id": "696525324451577936"
+  }
+}
 `;
 
 // Mock Discord Gateway API
