@@ -2,6 +2,9 @@ const Client = require('../eminem/Client');
 const Message = require('../eminem/Message');
 const Bot = require('./Bot');
 const Command = require('./Command');
+const {
+  executeMenu, executeReactMenu, executeCheckBoxReactMenu,
+} = require('./index');
 
 describe('event handlers', () => {
   let client;
@@ -151,4 +154,21 @@ test('login', () => {
   const token = 'awil35j89afjia3jkl';
   bot.login(token);
   expect(client.login).toHaveBeenCalledWith(token);
+});
+
+test('executeMenu', async () => {
+  const menuText = 'menu text';
+  const timeout = 10;
+  const choices = '1 2 3 4';
+
+  const channel = {send: jest.fn()};
+  const promise = executeMenu(channel, menuText, timeout, choices);
+
+  setTimeout(() => {
+    expect(channel.send).toHaveBeenCalled();
+    const message = new Message();
+    message.content = '3';
+    client.emit('MESSAGE_CREATE', message);
+    expect(promise).resolves.toBe('3');
+  }, 1000);
 });
