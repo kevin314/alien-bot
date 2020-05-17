@@ -143,3 +143,12 @@ describe('event handlers', () => {
     return message;
   }
 });
+
+test('login', () => {
+  const client = new Client();
+  client.login = jest.fn();
+  const bot = new Bot({}, client);
+  const token = 'awil35j89afjia3jkl';
+  bot.login(token);
+  expect(client.login).toHaveBeenCalledWith(token);
+});
