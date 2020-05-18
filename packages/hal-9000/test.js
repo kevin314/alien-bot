@@ -157,26 +157,76 @@ test('login', () => {
   expect(client.login).toHaveBeenCalledWith(token);
 });
 
-test('executeMenu', (done) => {
-  const channel = {send: jest.fn()};
+describe('executeMenu', () => {
+  test('valid response', (done) => {
+    const channel = {send: jest.fn()};
 
-  const user = new User();
-  user.id = 'somesnowflakeid';
+    const user = new User();
+    user.id = 'somesnowflakeid';
 
-  const menuText = 'menu text';
-  const timeout = 10;
-  const choices = ['1', '2', '3', '4'];
-  const promise = executeMenu(channel, user, {menuText, timeout, choices});
+    const menuText = 'menu text';
+    const timeout = 10;
+    const choices = ['1', '2', '3', '4'];
+    const promise = executeMenu(channel, user, {menuText, timeout, choices});
 
-  setTimeout(() => {
+    setTimeout(() => {
+      expect(channel.send).toHaveBeenCalled();
+      const message = new Message();
+      message.author = user;
+      message.content = '3';
+      client.emit('MESSAGE_CREATE', message);
+      expect(promise).resolves.toBe('3');
+      done();
+    }, 1000);
+  });
+
+  test('no response timeout', async () => {
+    const channel = {send: jest.fn()};
+
+    const user = new User();
+    user.id = 'somesnowflakeid';
+
+    const menuText = 'menu text';
+    const timeout = 10;
+    const choices = ['1', '2', '3', '4'];
+    const choice = await executeMenu(
+        channel, user, {menuText, timeout, choices},
+    );
+
     expect(channel.send).toHaveBeenCalled();
-    const message = new Message();
-    message.author = user;
-    message.content = '3';
-    client.emit('MESSAGE_CREATE', message);
-    expect(promise).resolves.toBe('3');
-    done();
-  }, 1000);
+    expect(choice).toBeUndefined();
+  });
+
+  test('invalid response', (done) => {
+    const channel = {send: jest.fn()};
+
+    const user = new User();
+    user.id = 'somesnowflakeid';
+
+    const menuText = 'menu text';
+    const timeout = 10;
+    const choices = ['1', '2', '3', '4'];
+    const promise = executeMenu(channel, user, {menuText, timeout, choices});
+
+    setTimeout(() => {
+      expect(channel.send).toHaveBeenCalled();
+      const message = new Message();
+      message.author = user;
+      message.content = '5';
+      client.emit('MESSAGE_CREATE', message);
+
+      channel.send.mockClear();
+      expect(channel.send).toHaveBeenCalled();
+
+      const message1 = new Message();
+      message1.author = user;
+      message1.content = '4';
+      client.emit('MESSAGE_CREATE', message1);
+
+      expect(promise).resolves.toBe('4');
+      done();
+    }, 1000);
+  });
 });
 
 test('executeReactMenu', (done) => {
