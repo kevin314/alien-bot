@@ -225,7 +225,7 @@ const messageReactionAddGateway = `\
   "op": 0,
   "d": {
     "user_id": "195389898784636928",
-    "message_id": "709987531562942484",
+    "message_id": "699076792958320725",
     "member": {
       "user": {
         "username": "Keane",
@@ -256,7 +256,7 @@ const messageReactionRemoveGateway = `\
   "op": 0,
   "d": {
     "user_id": "195389898784636928",
-    "message_id": "709987531562942484",
+    "message_id": "699076792958320725",
     "emoji": {
       "name": "🤨",
       "id": null
@@ -273,7 +273,7 @@ const messageReactionRemoveAllGateway = `\
   "s": 3,
   "op": 0,
   "d": {
-    "message_id": "709987531562942484",
+    "message_id": "699076792958320725",
     "channel_id": "696525324451577939",
     "guild_id": "696525324451577936"
   }
@@ -286,7 +286,7 @@ const messageReactionRemoveEmojiGateway = `\
   "s": 3,
   "op": 0,
   "d": {
-    "message_id": "709987531562942484",
+    "message_id": "699076792958320725",
     "emoji": {
       "name": "😳",
       "id": null
