@@ -1,4 +1,5 @@
 const Client = require('../eminem/Client');
+const User = require('../eminem/User');
 const Message = require('../eminem/Message');
 const Bot = require('./Bot');
 const Command = require('./Command');
@@ -156,19 +157,98 @@ test('login', () => {
   expect(client.login).toHaveBeenCalledWith(token);
 });
 
-test('executeMenu', async () => {
+test('executeMenu', (done) => {
+  const channel = {send: jest.fn()};
+
+  const user = new User();
+  user.id = 'somesnowflakeid';
+
   const menuText = 'menu text';
   const timeout = 10;
-  const choices = '1 2 3 4';
-
-  const channel = {send: jest.fn()};
-  const promise = executeMenu(channel, menuText, timeout, choices);
+  const choices = ['1', '2', '3', '4'];
+  const promise = executeMenu(channel, user, {menuText, timeout, choices});
 
   setTimeout(() => {
     expect(channel.send).toHaveBeenCalled();
     const message = new Message();
+    message.author = user;
     message.content = '3';
     client.emit('MESSAGE_CREATE', message);
     expect(promise).resolves.toBe('3');
+    done();
+  }, 1000);
+});
+
+test('executeReactMenu', (done) => {
+  const message = new Message();
+  message.id = 'somesnowflakeid';
+
+  const channel = {send: jest.fn()};
+  channel.send.mockResolvedValue(message);
+
+  const user = new User();
+  const menuText = 'menu text';
+  const timeout = 10;
+  const choices = ['🤨', '🥺', '😳', '😭'];
+
+  const promise = executeReactMenu(channel, user, {menuText, timeout, choices});
+
+  setTimeout(() => {
+    expect(channel.send).toHaveBeenCalled();
+    const messageClone = Object.assign({}, message);
+    client.emit('MESSAGE_REACTION_ADD', {
+      user: user,
+      message: messageClone,
+      emoji: {
+        id: null,
+        name: '🥺',
+      },
+    });
+    expect(promise).resolves.toBe('🥺');
+    done();
+  }, 1000);
+});
+
+test('executeCheckBoxReactMenu', (done) => {
+  const message = new Message();
+  message.id = 'somesnowflakeid';
+
+  const channel = {send: jest.fn()};
+  channel.send.mockResolvedValue(message);
+
+  const user = new User();
+  const menuText = 'menu text';
+  const timeout = 10;
+  const choices = ['🤨', '🥺', '😳', '😭'];
+
+  const promise = executeCheckBoxReactMenu(
+      channel, user, {menuText, timeout, choices},
+  );
+
+  setTimeout(() => {
+    expect(channel.send).toHaveBeenCalled();
+    const messageClone = Object.assign({}, message);
+    client.emit('MESSAGE_REACTION_ADD', {
+      user: user,
+      message: messageClone,
+      emoji: {
+        id: null,
+        name: '🥺',
+      },
+    });
+    setTimeout(() => {
+      client.emit('MESSAGE_REACTION_ADD', {
+        user: user,
+        message: messageClone,
+        emoji: {
+          id: null,
+          name: '😭',
+        },
+      });
+      setTimeout(() => {
+        expect(promise).resolves.toEqual(['🥺', '😭']);
+        done();
+      }, 8000);
+    }, 1000);
   }, 1000);
 });
