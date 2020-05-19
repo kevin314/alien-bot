@@ -3,7 +3,7 @@
  */
 class Bot {
   /**
-   * @param {Object} config Discord JSON channel object
+   * @param {Object} config
    * @param {Client} [client] Instance of a Discord API client
    */
   constructor(config, client) {}
