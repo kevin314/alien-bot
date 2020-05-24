@@ -6,20 +6,29 @@ const Channel = require('../eminem/Channel');
 const sleep = require('util').promisify(setTimeout);
 
 jest.mock('../hal-9000');
-jest.mock('../eminem/Message');
 jest.mock('../eminem/User');
 jest.mock('../eminem/Channel');
+jest.mock('../eminem/Message');
 
 const sentMessages = [];
-
-const send = (text) => {
+const mockSend = (text) => {
   const ret = new Message();
   ret.content = text;
   sentMessages.push(ret);
   return ret;
 };
-Channel.send.mockImplementation(send);
-Message.reply.mockImplementation(send);
+Channel.mockImplementation(() => {
+  return {
+    send: jest.fn().mockImplementation(mockSend),
+  };
+});
+Message.mockImplementation(() => {
+  return {
+    edit: jest.fn(),
+    delete: jest.fn(),
+    reply: jest.fn().mockImplementation(mockSend),
+  };
+});
 
 test('4 player game no errors', async () => {
   const commandIdxs = {};
