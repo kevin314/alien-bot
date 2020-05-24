@@ -172,7 +172,7 @@ test('4 player game no errors', async () => {
     const testablePlayers = valuesExceptKey(players, captainId);
     const testSelectMessage = new Message();
     testSelectMessage.author = captain;
-    testSelectMessage.content = `!testPrefix test o <@${testablePlayers[0]}> <@${testablePlayers[1]}>`; // eslint-disable-line max-len
+    testSelectMessage.content = `!testPrefix test o <@${testablePlayers[0].id}> <@${testablePlayers[1].id}>`; // eslint-disable-line max-len
     testSelectMessage.channel = gameChannel;
 
     // "Receive" captain's test selection message
