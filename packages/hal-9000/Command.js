@@ -10,7 +10,8 @@ class Command {
   constructor(name, helptext, callback) {}
 
   /**
-   * Call Discord's Channel Create Message endpoint.
+   * Add a subcommand to this command. If the command passed in is already
+   * a subcommand, nothing will happen.
    * @param {Command} command
    */
   addCommand(command) {}

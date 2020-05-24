@@ -9,10 +9,21 @@ class Bot {
   constructor(config, client) {}
 
   /**
-   * Call Discord's Channel Create Message endpoint.
+   * Connect the bot to Discord.
+   * @param {String} botToken
+   */
+  login(botToken) {}
+
+  /**
+   * Add a top-level command.
    * @param {Command} command
    */
   addCommand(command) {}
+
+  /**
+   * Disconnect the bot from Discord.
+   */
+  logout() {}
 }
 
 module.exports = Bot;
