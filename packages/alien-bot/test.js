@@ -1,5 +1,5 @@
 const {start} = require('./index');
-const {Command} = require('../hal-9000');
+const {executeReactMenu, Command} = require('../hal-9000');
 const Message = require('../eminem/Message');
 const User = require('../eminem/User');
 const Channel = require('../eminem/Channel');
@@ -175,26 +175,24 @@ test('4 player game no errors', async () => {
     testSelectMessage.content = `!testPrefix test o <@${testablePlayers[0].id}> <@${testablePlayers[1].id}>`; // eslint-disable-line max-len
     testSelectMessage.channel = gameChannel;
 
+    // Mock executeReactMenu
+    executeReactMenu.mockImplementation(async () => {
+      await sleep(1);
+      return '1️⃣';
+    });
+
     // "Receive" captain's test selection message
     await testCallback(testSelectMessage);
 
     // Verify test selected behavior
     expect(testablePlayers[0].send).toHaveBeenCalled();
     expect(testablePlayers[1].send).toHaveBeenCalled();
+    expect(executeReactMenu).toHaveBeenCalledTimes(2);
+    expect(gameChannel.send).toHaveBeenCalled();
 
     // Reset
     gameChannel.send.mockClear();
-
-    // Make testablePlayers[0]'s test response message
-
-    // "Receive" testablePlayers[0]'s test response message
-
-    // Make testablePlayers[1]'s test response message
-
-    // "Receive" testablePlayers[0]'s test response message
-
-    // Verify test complete behavior
-    expect(gameChannel.send).toHaveBeenCalled();
+    executeReactMenu.mockClear();
 
     // Reset for next round
     sentMessages.length = 0; // clear sentMessages
