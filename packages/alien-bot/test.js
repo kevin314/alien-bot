@@ -1,5 +1,5 @@
 const {start} = require('./index');
-const {executeReactMenu, Command} = require('../hal-9000');
+const {getInput, executeReactMenu, Command} = require('../hal-9000');
 const Message = require('../eminem/Message');
 const User = require('../eminem/User');
 const Channel = require('../eminem/Channel');
@@ -30,7 +30,7 @@ Message.mockImplementation(() => {
   };
 });
 
-test('4 player game no errors', async () => {
+test('4 player game no hacks, no command errors', async () => {
   const commandIdxs = {};
   const bot = {
     login: jest.fn(),
@@ -62,6 +62,8 @@ test('4 player game no errors', async () => {
   const startCallback = Command.mock.calls[commandIdxs['start']][2];
   const joinCallback = Command.mock.calls[commandIdxs['join']][2];
   const testCallback = Command.mock.calls[commandIdxs['test']][2];
+  const buttonCallback = Command.mock.calls[commandIdxs['button']][2];
+  const voteCallback = Command.mock.calls[commandIdxs['vote']][2];
 
   /* PTB START */
   // Setup message
@@ -146,18 +148,21 @@ test('4 player game no errors', async () => {
   gameChannel.send.mockClear();
   await sleep(27000);
 
-  /* ROUND 1 */
-  await (async () => {
-    // The game start message should have been sent in the last 27 seconds and
-    // no earlier.
-    expect(gameChannel.send.mock.calls.length).toBeGreaterThan(2);
-    const captainMessage = sentMessages[1];
-    const roundStartMessage = sentMessages[2];
+  // The game start message should have been sent in the last 27 seconds and
+  // no earlier.
+  expect(gameChannel.send).toHaveBeenCalled();
+  expect(sentMessages.length).toBeGreaterThan(0);
+  gameChannel.send.mock.calls.shift();
+  sentMessages.shift();
+
+  const testRound = async (testLetter, examineeCount) => {
+    expect(gameChannel.send).toHaveBeenCalled();
+    const captainMessage = sentMessages[0];
+    const roundStartMessage = sentMessages[1];
     const timerMessage = sentMessages[sentMessages.length - 1];
 
     const match = captainMessage.content.match(/<@[!0-9]?[0-9]+>/);
     const captainId = match[0].match(/[0-9]+/);
-    console.log(captainId);
 
     // Check that timers are being updated
     await sleep(1000);
@@ -172,60 +177,93 @@ test('4 player game no errors', async () => {
     const testablePlayers = valuesExceptKey(players, captainId);
     const testSelectMessage = new Message();
     testSelectMessage.author = captain;
-    testSelectMessage.content = `!testPrefix test o <@${testablePlayers[0].id}> <@${testablePlayers[1].id}>`; // eslint-disable-line max-len
+    let content = `!testPrefix test ${testLetter}`;
+    for (let i = 0; i < examineeCount; i++) {
+      content += ` <@${testablePlayers[i].id}>`;
+    }
+    testSelectMessage.content = content;
     testSelectMessage.channel = gameChannel;
-
-    // Mock executeReactMenu
-    executeReactMenu.mockImplementation(async () => {
-      await sleep(1);
-      return '1️⃣';
-    });
 
     // "Receive" captain's test selection message
     await testCallback(testSelectMessage);
 
     // Verify test selected behavior
-    expect(testablePlayers[0].send).toHaveBeenCalled();
-    expect(testablePlayers[1].send).toHaveBeenCalled();
-    expect(executeReactMenu).toHaveBeenCalledTimes(2);
+    for (let i = 0; i < examineeCount; i++) {
+      expect(testablePlayers[i].send).toHaveBeenCalled();
+    }
     expect(gameChannel.send).toHaveBeenCalled();
 
     // Reset
     gameChannel.send.mockClear();
-    executeReactMenu.mockClear();
 
     // Reset for next round
     sentMessages.length = 0; // clear sentMessages
     gameChannel.send.mockClear();
     timerMessage.edit.mockClear();
-  })();
+  };
 
+  /* ROUND 1 */
+  executeReactMenu.mockImplementation(async () => {
+    await sleep(1);
+    return '1️⃣';
+  });
+  await testRound('o', 2);
+  expect(executeReactMenu).toHaveBeenCalledTimes(2);
+  executeReactMenu.mockClear();
   await sleep(45000);
 
   /* ROUND 2 */
-  await (async () => {
-    expect(gameChannel.send.mock.calls.length).toBeGreaterThan(1);
-    const captainMessage = sentMessages[0];
-    const roundStartMessage = sentMessages[1];
-    const timerMessage = sentMessages[sentMessages.length - 1];
+  executeReactMenu.mockImplementation(async () => {
+    await sleep(1);
+    return '2️⃣';
+  });
+  await testRound('d', 2);
+  expect(executeReactMenu).toHaveBeenCalledTimes(2);
+  executeReactMenu.mockClear();
+  await sleep(45000);
 
-    const match = captainMessage.content.match(/<@[!0-9]?[0-9]+>/);
-    const captainId = match[0].match(/[0-9]+/);
-    console.log(captainId);
+  /* ROUND 3 */
+  getInput.mockImplementation(async () => {
+    await sleep(1);
+    return '123';
+  });
+  await testRound('b', 2);
+  expect(getInput).toHaveBeenCalledTimes(2);
+  getInput.mockClear();
+  await sleep(45000);
 
+  /* ROUND 4 */
+  getInput.mockImplementation(async () => {
+    await sleep(1);
+    return 'Free response.';
+  });
+  await testRound('w', 2);
+  expect(getInput).toHaveBeenCalledTimes(2);
+  getInput.mockClear();
+  await sleep(30000);
+
+  /* BUTTON PUSH */
+  const playersArray = Object.values(players);
+  const pushButtonMessage = new Message();
+  pushButtonMessage.author = playersArray[0];
+  pushButtonMessage.content = `!testPrefix button <@${alien.id}>`;
+  pushButtonMessage.channel = gameChannel;
+  await buttonCallback(pushButtonMessage);
+  expect(gameChannel.send).toHaveBeenCalled();
+  await sleep(1000);
+  expect(sentMessages[sentMessages.length - 1].edit).toHaveBeenCalled();
+  gameChannel.send.mockClear();
+
+  for (let i = 1; i < 4; i ++) {
     await sleep(1000);
-    expect(roundStartMessage.edit).toHaveBeenCalled();
-    expect(timerMessage.edit).toHaveBeenCalled();
+    const voteMessage = new Message();
+    voteMessage.author = playersArray[i];
+    voteMessage.content = `!testPrefix vote yes`;
+    voteMessage.channel = gameChannel;
+    await voteCallback(voteMessage);
+  }
 
-    const captain = players[captainId];
-    if (!captain) {
-      throw new Error('Unexpected captain id');
-    }
-
-    sentMessages.length = 0; // clear sentMessages
-    gameChannel.send.mockClear();
-    timerMessage.edit.mockClear();
-  })();
+  expect(gameChannel.send).toHaveBeenCalled();
 });
 
 /**
