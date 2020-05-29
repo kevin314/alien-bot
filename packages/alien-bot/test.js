@@ -264,7 +264,7 @@ test('4 player game no hacks, no command errors', async () => {
   }
 
   expect(gameChannel.send).toHaveBeenCalled();
-});
+}, 600000);
 
 /**
  * @param {*} obj
