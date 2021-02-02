@@ -15,5 +15,9 @@
   "bugs": {
     "url": "https://github.com/kevin314/alien-bot/issues"
   },
-  "homepage": "https://github.com/kevin314/alien-bot#readme"
+  "homepage": "https://github.com/kevin314/alien-bot#readme",
+  "dependencies": {
+    "bottleneck": "^2.19.5",
+    "ws": "^7.4.2"
+  }
 }

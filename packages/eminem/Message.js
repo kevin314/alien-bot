@@ -3,11 +3,15 @@
  */
 class Message {
   /**
-   * @param {Object} messageJsonObject Discord JSON message object
-   * @param {Client} client Instance of a Discord API client
+   * @param {Object} JSONObject Discord JSON message object
    * @param {Channel} channel
+   * @param {User} user Instance of a Discord API client
    */
-  constructor(messageJsonObject, client, channel) {}
+  constructor(JSONObject, channel, user) {
+    this.content = JSONObject['content'];
+    this.channel = channel;
+    this.user = user;
+  }
 
   /**
    * Edit the content of a message.

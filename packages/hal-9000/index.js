@@ -6,6 +6,5 @@ module.exports = {
   createReactMenu: function() {},
   executeCheckBoxReactMenu: async function() {},
   createCheckBoxReactMenu: function() {},
-  Bot: require('./Bot'),
-  Command: require('./Command'),
+  ...require('./parser'),
 };
