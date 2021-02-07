@@ -42,7 +42,9 @@ async function getInput(channel, user, text, time, em) {
   }
 
   const cancel = new Promise((resolve, reject) => {
-    em.on('abort', resolve);
+    if (em) {
+      em.on('abort', resolve);
+    }
   });
 
   const timeout = new Promise((resolve, reject) => {

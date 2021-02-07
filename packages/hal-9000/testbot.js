@@ -1,35 +1,42 @@
 const {Client} = require('eminem');
 const {eminemMessageReceivedHandler, getInput, getMultipleChoiceInput, parseMessage, AlreadyWaitingForInputError} = require('./index');
 
+const gameInstances = {};
+
 const commands = {
   ptb: {
     subs: {
       start: {
         subs: {},
-        callback: async function(message, textArgs) {
-          const response = await getInput(message.channel, message.user, undefined, 10000);
-          message.channel.send('ptb start' + textArgs.join(' '));
+        callback: async (message) => {
+          if (gameInstances[message.channel.id]) {
+            await message.channel.send('An instance of PTB has already started!');
+            return;
+          }
+          console.log('message is : ' + message);
+          const ptb = new PushTheButton(message.channel);
+          gameInstances['ptb'].push(ptb);
+          ptb.startCallback(message);
+          if (ptb.hasStarted === false) {
+            delete ptb;
+          }
         },
       },
       join: {
         subs: {},
+        callback: async (message) => {
+          if (gameInstances[message.channel.id]) {
+            const ptb = gameInstances[message.channel.id];
+            if (ptb.hasStarted == false) {
+              ptb.joinCallback(message);
+            }
+          }
+        },
       },
       help: {
         subs: {},
         callback: async (message) => {
-          try {
-            const response = await getMultipleChoiceInput(message.channel, message.user, `im waiting for response to ${message.content}`, options, 5000);
-            if (response) {
-              await message.channel.send(`done waiting for response to ${message.content} ${response}`);
-            } else {
-              await message.channel.send(`timed out waiting for response to ${message.content} ${response}`);
-            }
-          // await message.channel.send(message.channel.id);
-          } catch (err) {
-            if (!err instanceof AlreadyWaitingForInputError) {
-              throw err;
-            }
-          }
+          await message.send('Type \'!ptb start\' to start a new game of Push the Button!');
         },
       },
     },
