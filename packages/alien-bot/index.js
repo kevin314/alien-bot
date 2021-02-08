@@ -1,6 +1,8 @@
 const process = require('process');
 const {Client} = require('eminem');
 const {eminemMessageReceivedHandler, getInput, getMultipleChoiceInput, parseMessage, AlreadyWaitingForInputError} = require('hal-9000');
+const Message = require('eminem/Message');
+const Channel = require('eminem/Channel');
 
 /**
  * Register command handlers and start the Bot instance.
@@ -38,7 +40,7 @@ class PushTheButton {
     for (let i = 0; i < this.numAliens; i++) {
       const chosenAlienPlayer = unpicked[unpicked.length * Math.random() << 0];
       this.alienIDs.add(chosenAlienPlayer);
-      unpicked = unpicked.filter((value) => value != chosenAlienPlayer);
+      unpicked = unpicked.filter((value) => value !== chosenAlienPlayer);
     }
 
     this.humanIDs = new Set(unpicked);
@@ -49,96 +51,92 @@ class PushTheButton {
     }
     this.captainIDs = playerIDs;
 
-    if (playerIDs.length >= 2 && playerIDs.length < 6) {
-      this.maxTestees = 2;
-    } else if (playerIDs.length >= 6 && playerIDs.length < 9) {
-      this.maxTestees = 3;
-    } else {
-      this.maxTestees = 4;
-    }
-
     while (this.hasStarted) {
       let skipCaptain = false;
-      const captain = this.players[this.captainIDs[this.round % this.captainIDs.length]].user;
+      //  const captain = this.players[this.captainIDs[this.round % this.captainIDs.length]].user;
+      const captain = this.players['99284711607644160'].user;
       await this.channel.send(`Round ${this.round + 1} has started! ${captain.username} will be the captain for this round.`);
       /* Ask captain which examination to use. */
-      const choice = await getMultipleChoiceInput(
+      const gameChoice = await getMultipleChoiceInput(
           this.channel, captain,
           `Captain, choose a test:
-        1. Opinion Hold
-        2. Deliberation Deck
-        3. Writing Pod
-        4. Bioscanner`,
+        **1. Opinion Hold**
+        **2. Deliberation Deck**
+        **3. Writing Pod**
+        **4. Bioscanner**`,
           ['1', '2', '3', '4'], 15000,
       );
 
-      if (choice == undefined) {
+      if (gameChoice == undefined) {
         await this.channel.send(`Looks like our captain couldn't make a decision in time! A new captain will be now be selected`);
+        this.round++;
         continue;
+      }
+      const roomsEnums = {'1': 'Opinion Hold', '2': 'Deliberation Deck', '3': 'Writing Pod', '4': 'Bioscanner'};
+      unpicked = playerIDs;
+      unpicked = unpicked.filter((value) => value != captain.id);
+
+      await this.channel.send(`${roomsEnums[gameChoice]} selected for this round`);
+
+      let maxTestees;
+      let numTestees;
+      if (playerIDs.length >= 4 && playerIDs.length < 6) {
+        maxTestees = 2;
+      } else if (playerIDs.length >= 6 && playerIDs.length < 9) {
+        maxTestees = 3;
       } else {
-        const roomsEnums = {'1': 'Opinion Hold', '2': 'Deliberation Deck', '3': 'Writing Pod', '4': 'Bioscanner'};
-        let playerSelectionPrompt = '';
-        unpicked = playerIDs;
-        unpicked = unpicked.filter((value) => value != captain.id);
+        maxTestees = 4;
+      }
+      if (gameChoice === '4') {
+        numTestees = 2;
+      } else {
+        numTestees = maxTestees;
+      }
+
+      const selectedPlayers = [];
+      let selectedPlayer;
+      for (let i = 0; i < numTestees; i++) {
         const playerEnums = {};
+        /* Ask captain which players to examine. */
+        //  Bioscanner only has two testees
+        let playerSelectionPrompt = '';
+        const playerOptions = [];
 
         for (let i = 0; i < unpicked.length; i++) {
           playerEnums[i+1] = unpicked[i];
-          playerSelectionPrompt += `${i+1}. ${this.players[unpicked[i]].user.username}`;
+          playerSelectionPrompt += `\n\t\t\t\t**${i+1}. ${this.players[unpicked[i]].user.username}**`;
+          playerOptions.push('' + (i+1));
         }
-        await this.channel.send(`${roomsEnums.choice} selected for this round`);
+        const choiceUsers = await getMultipleChoiceInput(
+            this.channel, captain, `Captain, choose a player to be tested for the ${roomsEnums[gameChoice]}. (${i}/2)` +
+            playerSelectionPrompt, playerOptions, 5000,
+        );
+        if (choiceUsers == undefined) {
+          skipCaptain = true;
+          break;
+        }
+        selectedPlayer = this.players[playerEnums[choiceUsers]].user;
+        await this.channel.send(`${selectedPlayer.username} was selected.`);
+        unpicked = unpicked.filter((value) => value !== playerEnums[choiceUsers]);
+      }
+      if (skipCaptain == true) {
+        await this.channel.send(`Looks like our captain couldn't make a decision in time! A new captain will be now be selected`);
+        this.round++;
+        continue;
+      }
+      selectedPlayers.push(selectedPlayer);
 
-        const selectedPlayers = [];
-        playerSelectionPrompt = '';
-        for (let i = 0; i < this.maxTestees; i++) {
-          /* Ask captain which players to examine. */
-          if (i == 2) {
-            if (choice == '4') {
-              break;
-            }
-          }
-          const choiceUsers = await getMultipleChoiceInput(
-              this.channel, captain, `Captain, choose a player to be tested for the ${roomsEnums.choice}. (${i}/2)
-              ${playerSelectionPrompt}`, 15000,
-          );
-          if (choiceUsers == undefined) {
-            skipCaptain = true;
-            break;
-          }
-          selectedPlayer = this.players[playerEnums.choiceUsers].user;
-          await this.channel.send(`${selectedPlayer.username} was selected.`);
-          unpicked = unpicked.filter((value) => value != playerEnums.choiceUsers);
-          for (let i = 0; i < unpicked.length; i++) {
-            if (unpicked[i] == undefined) {
-              continue;
-            }
-            playerEnums[i+1] = unpicked[i];
-            playerSelectionPrompt += `${i+1}. ${this.players[unpicked[i]].user.username}`;
-          }
-        }
-        if (skipCaptain == true) {
-          continue;
-        }
-        selectedPlayers.push(selectedPlayer);
+      switch (gameChoice) {
+        case '1':
+          opinionHold();
+          break;
       }
 
-      /* let validChoice = false;
-      do {
-        switch (choice) {
-          case '1':
-            validChoice = true;
-            opinionHold(channel);
-            break;
-          default:
-            message.reply('Valid options are 1 through 3');
-        }
-      }
-      while (validChoice === false); */
       this.round++;
     }
   }
 
-  async opinionHold(channel) {
+  async opinionHold() {
     const prompt = 'test prompt';
 
     channel.send(`\
@@ -206,7 +204,7 @@ class PushTheButton {
 
     await new Promise((resolve, reject) => {
       this.startTimeout = setTimeout(async () => {
-        if (Object.keys(this.players).length < 2) {
+        if (Object.keys(this.players).length < 4) {
           message.channel.send('Game aborted due to lack of players. At least four were needed.');
           resolve();
           return;
@@ -315,8 +313,10 @@ const commands = {
   },
 };
 
-const client = new Client();
-const botToken = 'Njk2NTE5NTkzMzg0MjE0NTI4.Xop6aw.pdmiSQ65BvMptKQiwWmmCILjXE4';
+const client = new Client('Njk2NTE5NTkzMzg0MjE0NTI4.Xop6aw.pdmiSQ65BvMptKQiwWmmCILjXE4');
+const bot1 = new Client('ODA4MjA1NjUwODAxOTgzNTE4.YCDKKg.TXcMPKmcyIAP4eBeZJTa5EXJ18s');
+const bot2 = new Client('ODA4MjA1NzMxODkwNzI0ODk0.YCDKPg.X-imxUG0-Hc4Gd54ija1VUkWGZ4');
+const bot3 = new Client('ODA4Mjg4MTU2NjY3MzQ2OTU0.YCEXAQ.rT1vaUnXFaG4YSyg5Zgab9MzTSE');
 
 client.on('message', (message) => {
   const obj = parseMessage(message.content, commands);
@@ -328,12 +328,30 @@ client.on('message', (message) => {
   }
 });
 
-
 client.on('message', eminemMessageReceivedHandler);
 
-const options = ['1', '2', '3', '4'];
+bot1.on('message', (message) => {
+  if (message.content.includes('Type \'!ptb join\' to play!')) {
+    message.channel.send('!ptb join');
+  }
+});
 
-client.login(botToken);
+bot2.on('message', (message) => {
+  if (message.content.includes('Type \'!ptb join\' to play!')) {
+    message.channel.send('!ptb join');
+  }
+});
+
+bot3.on('message', (message) => {
+  if (message.content.includes('Type \'!ptb join\' to play!')) {
+    message.channel.send('!ptb join');
+  }
+});
+
+client.login();
+bot1.login();
+bot2.login();
+bot3.login();
 
 
 // setTimeout(bot.logout.bind(bot), 15000);

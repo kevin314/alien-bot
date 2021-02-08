@@ -10,11 +10,15 @@ const User = require('./User');
  * Discord API client
  */
 class Client extends EventEmitter {
+  constructor(botToken) {
+    super();
+    this.botToken = botToken;
+  }
   /**
    * Connect to the Discord API. Must be called to receive/create messages.
    * @param {String} botToken Authorization token for the bot
    */
-  async login(botToken) {
+  async login() {
     const scope = {
       method: 'GET',
       host: 'discord.com',
@@ -22,7 +26,7 @@ class Client extends EventEmitter {
       path: '/api/v8/gateway/bot',
       headers: {
         'Authorization':
-          `Bot ${botToken}`,
+          `Bot ${this.botToken}`,
       },
     };
 
@@ -43,11 +47,9 @@ class Client extends EventEmitter {
       request.end();
     });
 
-    // console.log(responseData);
     this.ws = new WebSocket(responseData['url']);
 
     const heartbeat = () => {
-      //console.log('badump');
       this.ws.send(JSON.stringify({
         op: 1,
         d: null,
@@ -55,27 +57,22 @@ class Client extends EventEmitter {
     };
 
     this.ws.on('open', () => {
-      // console.log('Connected');
       this.connected = true;
     });
 
     this.ws.on('message', async (data) => {
       const response = JSON.parse(data);
-      // console.log('Message data');
-      // console.log(response);
       const opcode = response['op'];
 
       if (opcode == 10) {
-        // console.log('Hello');
         const heartbeatInterval = response['d']['heartbeat_interval'];
-        // console.log('op: ' + opcode + '\nheartbeat_interval: ' + heartbeatInterval);
         heartbeat();
         this.heart = setInterval(heartbeat, heartbeatInterval);
 
         this.ws.send(JSON.stringify({
           op: 2,
           d: {
-            token: botToken,
+            token: this.botToken,
             properties: {
               $os: 'windows',
               $browser: 'eminem',
@@ -90,7 +87,7 @@ class Client extends EventEmitter {
         if (response['t'] == 'MESSAGE_CREATE') {
           // console.log('Message recieved');
           if (response['d']['author']['id'] !== this.id) {
-            this.emit('message', new Message(response['d'], new Channel({'id': response['d']['channel_id']}),
+            this.emit('message', new Message(response['d'], new Channel({'id': response['d']['channel_id']}, this.botToken),
                 new User(response['d']['author'])));
           }
         } else if (response['t'] == 'READY') {

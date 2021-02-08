@@ -10,9 +10,9 @@ class Channel {
    * @param {Object} channelJsonObject Discord JSON channel object
    * @param {User} user Instance of a Discord API client
    */
-  constructor(channelJsonObject, user) {
+  constructor(channelJsonObject, botToken) {
     this.id = channelJsonObject['id'];
-    // console.log('New channel created- ID: ' + this.channel_id);
+    this.botToken = botToken;
   }
 
   /**
@@ -59,7 +59,7 @@ class Channel {
           port: '443',
           host: 'discord.com',
           path: `/api/v8/channels/${this.id}/messages`,
-          headers: {'Authorization': 'Bot Njk2NTE5NTkzMzg0MjE0NTI4.Xop6aw.pdmiSQ65BvMptKQiwWmmCILjXE4'},
+          headers: {'Authorization': `Bot ${this.botToken}`},
         },
         function(err, res) {
           if (err) {
