@@ -49,7 +49,9 @@ async function getInput(channel, user, text, time, em) {
 
   const timeout = new Promise((resolve, reject) => {
     if (time) {
-      setTimeout(resolve, time);
+      setTimeout(() => {
+        resolve('-1');
+      }, time);
     }
   });
 
@@ -85,7 +87,7 @@ async function getMultipleChoiceInput(channel, user, text, options, time) {
   const em = new EventEmitter();
   const timeout = new Promise((resolve, reject) => {
     setTimeout(() => {
-      resolve();
+      resolve('-1');
       em.emit('abort');
     }, time);
   });

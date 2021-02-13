@@ -87,8 +87,8 @@ class Client extends EventEmitter {
         if (response['t'] == 'MESSAGE_CREATE') {
           // console.log('Message recieved');
           if (response['d']['author']['id'] !== this.id) {
-            this.emit('message', new Message(response['d'], new Channel({'id': response['d']['channel_id']}, this.botToken),
-                new User(response['d']['author'])));
+            this.emit('message', new Message(response['d'], new Channel({'id': response['d']['channel_id']}, this),
+                new User(response['d']['author'], this)));
           }
         } else if (response['t'] == 'READY') {
           this.id = response['d']['user']['id'];
@@ -108,6 +108,7 @@ class Client extends EventEmitter {
   /**
    * Disconnect from the Discord Gateway API.
    */
+
   disconnect() {
     clearInterval(this.heart);
     this.ws.close();
