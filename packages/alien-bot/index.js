@@ -3,7 +3,11 @@ const {Client} = require('eminem');
 const {eminemMessageReceivedHandler, getInput, getMultipleChoiceInput, parseMessage, AlreadyWaitingForInputError} = require('hal-9000');
 const Message = require('eminem/Message');
 const Channel = require('eminem/Channel');
+const fs = require('fs');
+const mergeImages = require('merge-images');
+const {Canvas, Image} = require('canvas');
 
+const imagesFilePath = '/Users/kevsa/Documents/alien/alien-bot/packages/alien-bot/images/';
 /**
  * Register command handlers and start the Bot instance.
  * @param {Bot} bot
@@ -357,6 +361,93 @@ class PushTheButton {
     await this.channel.send('Spend 30 seconds to deliberate which answers you think are suspicious. A new round will begin after.');
     await this.timeout(6000);
   }
+
+  async bioScanner(selectedPlayers) {
+    await this.channel.send(
+        'Two players that are chosen by the captain see a screen with ten glyphs. ' +
+        'The captain receives three of those glyphs and must describe them to the two players. ' +
+        'The two players must select the glyphs on their device that match the captain\'s description. ' +
+        'If both players choose correctly, then the captain may choose any player to "scan". ' +
+        'Scanning a player will reveal the player\'s identity, ' +
+        'but only the captain will receive this information. The Bioscanner is only activated further ' +
+        ' into the game and can be chosen regardless of the other testing rooms. ' +
+        'The Bioscanner has a five-minute cooldown. The Alien(s) can also hack and give different glyphs ' +
+        'to the hacked player.',
+    );
+
+    const bioScannerText = `
+    Reply with 1 to choose the first option, and so on. You have 20 seconds.`;
+
+    const images = [];
+    fs.readdir(imagesFilePath, (err, files) => {
+      files.forEach((file) => {
+        if (file !== 'canvas.png') {
+          images.push(file);
+        }
+      });
+    });
+
+    let unpicked = images;
+    let selectedUnhackedImages = [];
+    for (let i = 0; i < 12; i ++) {
+      const chosenImage = unpicked[Math.floor(Math.random() * unpicked.length)];
+      selectedUnhackedImages.push(chosenImage);
+      unpicked = unpicked.filter((value) => value != chosenImage);
+    }
+    let buffer;
+    mergeImages([
+      {src: imagesFilePath + 'canvas.png', x: 0, y: 0},
+      {src: imagesFilePath + selectedUnhackedImages[0], x: 0, y: 0},
+      {src: imagesFilePath + selectedUnhackedImages[1], x: 175, y: 0},
+      {src: imagesFilePath + selectedUnhackedImages[2], x: 350, y: 0},
+      {src: imagesFilePath + selectedUnhackedImages[3], x: 0, y: 175},
+      {src: imagesFilePath + selectedUnhackedImages[4], x: 175, y: 175},
+      {src: imagesFilePath + selectedUnhackedImages[5], x: 350, y: 175},
+      {src: imagesFilePath + selectedUnhackedImages[6], x: 0, y: 350},
+      {src: imagesFilePath + selectedUnhackedImages[7], x: 175, y: 350},
+      {src: imagesFilePath + selectedUnhackedImages[5], x: 350, y: 350},
+      {src: imagesFilePath + selectedUnhackedImages[9], x: 0, y: 525},
+      {src: imagesFilePath + selectedUnhackedImages[10], x: 175, y: 525},
+      {src: imagesFilePath + selectedUnhackedImages[11], x: 350, y: 525},
+    ], {Canvas: Canvas, Image: Image}).then((b64) => {
+      buffer = Buffer.from(b64.replace(/^data:image\/png;base64,/, ''), 'base64');
+      console.log(buffer);
+    });
+
+    await this.timeout(5000);
+
+    const promises = selectedPlayers.map((selectedPlayer) => (async () => {
+      if (selectedPlayer.username === 'Parell' || selectedPlayer.username === 'Keane') {
+        if (this.alienIDs.has(selectedPlayer.id)) {
+          const DMchannel = await selectedPlayer.send(alienPrompt);
+          return getInput(DMchannel, selectedPlayer, writingPodText, 15000);
+        } else {
+          const DMchannel = await selectedPlayer.send(humanPrompt);
+          return getInput(DMchannel, selectedPlayer, writingPodText, 15000);
+        }
+      }
+      return '-1';
+    })());
+
+    const playerResponses = await Promise.allSettled(promises);
+
+    await this.channel.send(`Here was the prompt sent to the humans:\n*${humanPrompt}*`);
+    await this.timeout(3500);
+
+    let playerResponsesText = '';
+    for (let i = 0; i < playerResponses.length; i++) {
+      if (playerResponses[i].value === '-1') {
+        playerResponsesText += `\n**${selectedPlayers[i].username}**: *No response*`;
+      } else {
+        playerResponsesText += `\n**${selectedPlayers[i].username}**: ${playerResponses[i].value}`;
+      }
+    };
+
+    await this.channel.send('And here is how they responded:' + playerResponsesText);
+    await this.timeout(3500);
+    await this.channel.send('Spend 30 seconds to deliberate which answers you think are suspicious. A new round will begin after.');
+    await this.timeout(6000);
+  }
   /**
    * @param {Message} message
    */
@@ -497,6 +588,12 @@ const bot1 = new Client('ODA4MjA1NjUwODAxOTgzNTE4.YCDKKg.TXcMPKmcyIAP4eBeZJTa5EX
 const bot2 = new Client('ODA4MjA1NzMxODkwNzI0ODk0.YCDKPg.X-imxUG0-Hc4Gd54ija1VUkWGZ4'); // Mai
 const bot3 = new Client('ODA4Mjg4MTU2NjY3MzQ2OTU0.YCEXAQ.rT1vaUnXFaG4YSyg5Zgab9MzTSE'); // Yui
 
+/* fs.readFile(imagesFilePath + 'yui1.png', (err, data) => {
+  if (err) throw err;
+  buffer = data;
+  console.log(data);
+}); */
+
 client.on('message', (message) => {
   const obj = parseMessage(message.content, commands);
   if (obj) {
@@ -528,7 +625,11 @@ bot3.on('message', (message) => {
     message.channel.send('!ptb join');
   } else if (message.content.includes('1. Opinion Hold')) {
     message.channel.send('3');
+  } else if (message.content.includes('yahallo!')) {
+    // message.channel.send(undefined, imagesFilePath + 'yui1.PNG');
+    message.channel.send(undefined, buffer);
   }
+
   if (message.content.includes('. Keane')) {
     message.channel.send(message.content[message.content.indexOf('Keane') - 3]);
   } else if (message.content.includes('. Parell')) {
@@ -542,7 +643,6 @@ client.login();
 bot1.login();
 bot2.login();
 bot3.login();
-
 
 // setTimeout(bot.logout.bind(bot), 15000);
 

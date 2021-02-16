@@ -1,5 +1,6 @@
 const Bottleneck = require('bottleneck');
 const FormData = require('form-data');
+const fs = require('fs');
 
 const limiters = {};
 /**
@@ -8,7 +9,7 @@ const limiters = {};
 class Channel {
   /**
    * @param {Object} channelJsonObject Discord JSON channel object
-   * @param {User} user Instance of a Discord API client
+   * @param {User} client Instance of a Discord API client
    */
   constructor(channelJsonObject, client) {
     this.id = channelJsonObject['id'];
@@ -18,10 +19,11 @@ class Channel {
   /**
    * Call Discord's Channel Create Message endpoint.
    * @param {String} content Message to be sent
+   * @param {String} file Path to a local file
    * @param {String} embed
-   * @param {String} filepath Path to a local file
+   * @return {Promise}
    */
-  send(content, embed, filepath) {
+  send(content, file, embed) {
     const form = new FormData();
     if (content != undefined) {
       form.append('content', content);
@@ -29,8 +31,12 @@ class Channel {
     if (embed != undefined) {
       form.append('embed', embed);
     }
-    if (filepath != undefined) {
-      form.append('file', file);
+    if (file != undefined) {
+      if (typeof file === 'string') {
+        form.append('file', fs.createReadStream(file));
+      } else {
+        form.append('file', file, {filename: 'image.png'});
+      }
     }
 
     if (!limiters[this.id]) {
@@ -53,7 +59,7 @@ class Channel {
     }
 
     return new Promise((resolve, reject) => {
-      limiters[this.id].submit(
+      /* limiters[this.id].submit(
           form.submit.bind(form),
           {
             protocol: 'https:',
@@ -73,7 +79,28 @@ class Channel {
             });
             res.on('end', resolve);
           },
+      ); */
+      const a = form.submit(
+          {
+            protocol: 'https:',
+            port: '443',
+            host: 'discord.com',
+            path: `/api/v8/channels/${this.id}/messages`,
+            headers: {'Authorization': `Bot ${this.client.botToken}`},
+          },
+          function(err, res) {
+            if (err) {
+              console.log(err);
+            }
+            res.on('data', (d) => {
+              if (!(200 <= res.statusCode && res.statusCode < 300)) {
+                process.stdout.write(d);
+              }
+            });
+            res.on('end', resolve);
+          },
       );
+      //  console.log(a);
     });
   }
 }
