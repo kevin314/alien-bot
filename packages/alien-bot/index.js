@@ -416,13 +416,17 @@ class PushTheButton {
 
     await this.timeout(5000);
 
+    let totalResponses = [[], []];
+
     const promises = selectedPlayers.map((selectedPlayer) => (async () => {
       if (selectedPlayer.username === 'Parell' || selectedPlayer.username === 'Keane') {
         if (this.alienIDs.has(selectedPlayer.id)) {
-          const DMchannel = await selectedPlayer.send(alienPrompt);
+          const DMchannel = await selectedPlayer.send('The captain will now describe 3 glyphs-- ' +
+            'if both players being tested correctly select all 3, the bioscan will proceed', buffer);
           return getInput(DMchannel, selectedPlayer, writingPodText, 15000);
         } else {
-          const DMchannel = await selectedPlayer.send(humanPrompt);
+          const DMchannel = await selectedPlayer.send('The captain will now describe 3 glyphs-- ' +
+            'if both players being tested correctly select all 3, the bioscan will proceed', buffer);
           return getInput(DMchannel, selectedPlayer, writingPodText, 15000);
         }
       }
@@ -430,7 +434,7 @@ class PushTheButton {
     })());
 
     const playerResponses = await Promise.allSettled(promises);
-
+    totalResponses[0].push
     await this.channel.send(`Here was the prompt sent to the humans:\n*${humanPrompt}*`);
     await this.timeout(3500);
 
