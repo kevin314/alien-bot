@@ -1,4 +1,3 @@
-const process = require('process');
 const {Client} = require('eminem');
 const {eminemMessageReceivedHandler, getInput, getMultipleChoiceInput, parseMessage, AlreadyWaitingForInputError} = require('hal-9000');
 const Message = require('eminem/Message');
@@ -151,6 +150,8 @@ class PushTheButton {
         case '3':
           await this.writingPod(selectedPlayers);
           break;
+        case '4':
+          await this.bioScanner(selectedPlayers);
       }
 
       this.round++;
@@ -375,27 +376,59 @@ class PushTheButton {
         'to the hacked player.',
     );
 
-    const bioScannerText = `
-    Reply with 1 to choose the first option, and so on. You have 20 seconds.`;
+    const bioscannerText = `
+    Reply with a number to choose a glyph. You have 25 seconds.`;
 
-    const images = [];
-    fs.readdir(imagesFilePath, (err, files) => {
-      files.forEach((file) => {
-        if (file !== 'canvas.png') {
-          images.push(file);
-        }
+    const allImages = await new Promise((resolve, reject) => {
+      const images = {};
+      fs.readdir(imagesFilePath, (err, files) => {
+        files.forEach((file) => {
+          const category = file.substr(0, file.indexOf('_'));
+          if (file !== 'canvas.PNG' && file !== 'none.png' && file !== 'canvas2.png') {
+            if (!(images.hasOwnProperty(category))) {
+              images[category] = [];
+            }
+            images[category].push(file);
+          }
+        });
+        resolve(images);
       });
     });
 
-    let unpicked = images;
-    let selectedUnhackedImages = [];
-    for (let i = 0; i < 12; i ++) {
-      const chosenImage = unpicked[Math.floor(Math.random() * unpicked.length)];
-      selectedUnhackedImages.push(chosenImage);
-      unpicked = unpicked.filter((value) => value != chosenImage);
+    const chosenImageSets = [];
+    let keys = Object.keys(allImages);
+    const unpicked = allImages;
+    const captainImages = [];
+
+    for (let i = 0; i < 3; i++) {
+      const randomKey = keys[keys.length * Math.random() << 0];
+      keys = keys.filter((key) => key != randomKey);
+      const randomImageSet = unpicked[randomKey];
+      chosenImageSets.push(randomImageSet);
+      delete unpicked[randomKey];
+
+      captainImages.push(randomImageSet[Math.floor(Math.random() * randomImageSet.length)]);
     }
-    let buffer;
-    mergeImages([
+
+    console.log('captain Images:');
+    console.log(captainImages);
+    const selectedUnhackedImages = captainImages.slice();
+    for (let i = 0; i < 3; i++) {
+      let unpickedUnhackedImages = chosenImageSets[i].filter((image) => image !== captainImages[i]);
+      for (let j = 0; j < 3; j++) {
+        const unhackedImage = unpickedUnhackedImages[Math.floor(Math.random() * unpickedUnhackedImages.length)];
+        unpickedUnhackedImages = unpickedUnhackedImages.filter((image) => image !== unhackedImage);
+        selectedUnhackedImages.push(unhackedImage);
+      }
+    }
+
+    for (let i = selectedUnhackedImages.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [selectedUnhackedImages[i], selectedUnhackedImages[j]] = [selectedUnhackedImages[j], selectedUnhackedImages[i]];
+    }
+
+
+    const optionsb64 = await mergeImages([
       {src: imagesFilePath + 'canvas.png', x: 0, y: 0},
       {src: imagesFilePath + selectedUnhackedImages[0], x: 0, y: 0},
       {src: imagesFilePath + selectedUnhackedImages[1], x: 175, y: 0},
@@ -405,49 +438,79 @@ class PushTheButton {
       {src: imagesFilePath + selectedUnhackedImages[5], x: 350, y: 175},
       {src: imagesFilePath + selectedUnhackedImages[6], x: 0, y: 350},
       {src: imagesFilePath + selectedUnhackedImages[7], x: 175, y: 350},
-      {src: imagesFilePath + selectedUnhackedImages[5], x: 350, y: 350},
+      {src: imagesFilePath + selectedUnhackedImages[8], x: 350, y: 350},
       {src: imagesFilePath + selectedUnhackedImages[9], x: 0, y: 525},
       {src: imagesFilePath + selectedUnhackedImages[10], x: 175, y: 525},
       {src: imagesFilePath + selectedUnhackedImages[11], x: 350, y: 525},
-    ], {Canvas: Canvas, Image: Image}).then((b64) => {
-      buffer = Buffer.from(b64.replace(/^data:image\/png;base64,/, ''), 'base64');
-      console.log(buffer);
-    });
+    ], {Canvas: Canvas, Image: Image});
+
+    const optionsBuffer = Buffer.from(optionsb64.replace(/^data:image\/png;base64,/, ''), 'base64');
 
     await this.timeout(5000);
 
-    let totalResponses = [[], []];
+    const responseEnums = {};
+    responseEnums[-1] = 'none.png';
+    for (let i = 0; i < 12; i++) {
+      responseEnums[i+1] = selectedUnhackedImages[i];
+    }
+    const totalResponses = [[], []];
 
-    const promises = selectedPlayers.map((selectedPlayer) => (async () => {
-      if (selectedPlayer.username === 'Parell' || selectedPlayer.username === 'Keane') {
-        if (this.alienIDs.has(selectedPlayer.id)) {
-          const DMchannel = await selectedPlayer.send('The captain will now describe 3 glyphs-- ' +
-            'if both players being tested correctly select all 3, the bioscan will proceed', buffer);
-          return getInput(DMchannel, selectedPlayer, writingPodText, 15000);
+    let optionsP1 = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
+    let optionsP2 = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
+
+    for (let i = 0; i < 3; i++) {
+      const promises = selectedPlayers.map((selectedPlayer) => (async () => {
+        if (selectedPlayer.username === 'Parell' || selectedPlayer.username === 'Keane') {
+          let DMchannel;
+          if (i === 0) {
+            DMchannel = await selectedPlayer.send('The captain will now describe 3 glyphs-- ' +
+              'you have have 25 seconds for each glyph. If both players being tested correctly ' +
+              'select all 3, the bioscan will proceed', optionsBuffer);
+          } else {
+            DMchannel = await selectedPlayer.send('The captain will now describe the next image...');
+          }
+          if (selectedPlayers[0] == selectedPlayer) {
+            return getMultipleChoiceInput(DMchannel, selectedPlayer, bioscannerText, optionsP1, 25000);
+          } else if (selectedPlayers[1] == selectedPlayer) {
+            return getMultipleChoiceInput(DMchannel, selectedPlayer, bioscannerText, optionsP2, 25000);
+          }
         } else {
-          const DMchannel = await selectedPlayer.send('The captain will now describe 3 glyphs-- ' +
-            'if both players being tested correctly select all 3, the bioscan will proceed', buffer);
-          return getInput(DMchannel, selectedPlayer, writingPodText, 15000);
+          return '-1';
         }
-      }
-      return '-1';
-    })());
+      })());
+      const playerResponses = await Promise.allSettled(promises);
+      optionsP1 = optionsP1.filter((option) => option != playerResponses[0].value);
+      optionsP2 = optionsP2.filter((option) => option != playerResponses[1].value);
+      totalResponses[0].push(responseEnums[playerResponses[0].value]);
+      totalResponses[1].push(responseEnums[playerResponses[1].value]);
+    }
 
-    const playerResponses = await Promise.allSettled(promises);
-    totalResponses[0].push
-    await this.channel.send(`Here was the prompt sent to the humans:\n*${humanPrompt}*`);
+    console.log(captainImages);
+    const captainb64 = await mergeImages([
+      {src: imagesFilePath + 'canvas2.png', x: 0, y: 0},
+      {src: imagesFilePath + captainImages[0], x: 0, y: 0},
+      {src: imagesFilePath + captainImages[1], x: 175, y: 0},
+      {src: imagesFilePath + captainImages[2], x: 350, y: 0},
+    ], {Canvas: Canvas, Image: Image});
+
+    const captainBuffer = Buffer.from(captainb64.replace(/^data:image\/png;base64,/, ''), 'base64');
+
+    await this.channel.send(`Here were the glyphs the captain received:`, captainBuffer);
     await this.timeout(3500);
 
-    let playerResponsesText = '';
-    for (let i = 0; i < playerResponses.length; i++) {
-      if (playerResponses[i].value === '-1') {
-        playerResponsesText += `\n**${selectedPlayers[i].username}**: *No response*`;
-      } else {
-        playerResponsesText += `\n**${selectedPlayers[i].username}**: ${playerResponses[i].value}`;
-      }
-    };
+    await this.channel.send(`And here were the players' chosen glyphs:`);
 
-    await this.channel.send('And here is how they responded:' + playerResponsesText);
+    console.log(totalResponses);
+    for (let i = 0; i < 2; i++) {
+      const responseb64 = await mergeImages([
+        {src: imagesFilePath + 'canvas2.png', x: 0, y: 0},
+        {src: imagesFilePath + totalResponses[i][0], x: 0, y: 0},
+        {src: imagesFilePath + totalResponses[i][1], x: 175, y: 0},
+        {src: imagesFilePath + totalResponses[i][2], x: 350, y: 0},
+      ], {Canvas: Canvas, Image: Image});
+      const responseBuffer = Buffer.from(responseb64.replace(/^data:image\/png;base64,/, ''), 'base64');
+      this.channel.send(`**${selectedPlayers[i].username}**:`, responseBuffer);
+    }
     await this.timeout(3500);
     await this.channel.send('Spend 30 seconds to deliberate which answers you think are suspicious. A new round will begin after.');
     await this.timeout(6000);
@@ -628,7 +691,7 @@ bot3.on('message', (message) => {
   if (message.content.includes('Type \'!ptb join\' to play!')) {
     message.channel.send('!ptb join');
   } else if (message.content.includes('1. Opinion Hold')) {
-    message.channel.send('3');
+    message.channel.send('4');
   } else if (message.content.includes('yahallo!')) {
     // message.channel.send(undefined, imagesFilePath + 'yui1.PNG');
     message.channel.send(undefined, buffer);

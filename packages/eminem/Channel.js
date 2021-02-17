@@ -59,7 +59,7 @@ class Channel {
     }
 
     return new Promise((resolve, reject) => {
-      /* limiters[this.id].submit(
+       limiters[this.id].submit(
           form.submit.bind(form),
           {
             protocol: 'https:',
@@ -79,28 +79,7 @@ class Channel {
             });
             res.on('end', resolve);
           },
-      ); */
-      const a = form.submit(
-          {
-            protocol: 'https:',
-            port: '443',
-            host: 'discord.com',
-            path: `/api/v8/channels/${this.id}/messages`,
-            headers: {'Authorization': `Bot ${this.client.botToken}`},
-          },
-          function(err, res) {
-            if (err) {
-              console.log(err);
-            }
-            res.on('data', (d) => {
-              if (!(200 <= res.statusCode && res.statusCode < 300)) {
-                process.stdout.write(d);
-              }
-            });
-            res.on('end', resolve);
-          },
       );
-      //  console.log(a);
     });
   }
 }
