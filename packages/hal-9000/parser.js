@@ -6,6 +6,11 @@ class AlreadyWaitingForInputError extends Error {
     this.name = 'AlreadyWaitingForInputError';
   }
 }
+
+function timeout(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function parseMessage(text, commands) {
   if (text[0] === '!') {
     const commandArr = text.slice(1).split(' ');
@@ -116,4 +121,4 @@ async function getMultipleChoiceInput(channel, user, text, options, time) {
   return race;
 }
 
-module.exports = {parseMessage, getInput, getMultipleChoiceInput, eminemMessageReceivedHandler, AlreadyWaitingForInputError};
+module.exports = {timeout, parseMessage, getInput, getMultipleChoiceInput, eminemMessageReceivedHandler, AlreadyWaitingForInputError};

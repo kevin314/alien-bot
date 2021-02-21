@@ -1,5 +1,5 @@
 const {Client} = require('eminem');
-const {eminemMessageReceivedHandler, getInput, getMultipleChoiceInput, parseMessage, AlreadyWaitingForInputError} = require('hal-9000');
+const {eminemMessageReceivedHandler, getInput, getMultipleChoiceInput, parseMessage, timeout, AlreadyWaitingForInputError} = require('hal-9000');
 const Message = require('eminem/Message');
 const Channel = require('eminem/Channel');
 const fs = require('fs');
@@ -25,15 +25,11 @@ class PushTheButton {
     this.buttonedState = false;
   }
 
-  timeout(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
-
-  cancelWrapper(fn, channel, user, text, ...args) {
+  cancelWrapper(fn, ...args) {
     if (this.buttonedState === true) {
       throw (new Error('cancel'));
     } else {
-      return fn(channel, user, text, ...args);
+      return fn(...args);
     }
   }
   async playGame() {
@@ -81,7 +77,7 @@ class PushTheButton {
       const captain = this.players['808288156667346954'].user;
       await this.channel.send(`Round ${this.round + 1} has started! ${captain.username} will be the captain for this round.`);
       /* Ask captain which examination to use. */
-      const gameChoice = await cancelWrapper(getMultipleChoiceInput, this.channel, captain,
+      const gameChoice = await this.cancelWrapper(getMultipleChoiceInput, this.channel, captain,
           `Captain, choose a test:
         **1. Opinion Hold**
         **2. Deliberation Deck**
@@ -90,8 +86,10 @@ class PushTheButton {
           ['1', '2', '3', '4'], 15000);
 
       if (gameChoice == undefined) {
-        await this.channel.send(`Looks like our captain couldn't make a decision in time! A new captain will be selected shortly.`);
-        await this.timeout(5000);
+        if (this.buttonedState === true) {
+          await this.channel.send(`Looks like our captain couldn't make a decision in time! A new captain will be selected shortly.`);
+        }
+        await this.cancelWrapper(timeout, 5000);
         this.round++;
         continue;
       }
@@ -130,10 +128,9 @@ class PushTheButton {
           playerSelectionPrompt += `\n\t\t\t\t**${i+1}. ${this.players[unpicked[i]].user.username}**`;
           playerOptions.push('' + (i+1));
         }
-        const choiceUsers = await getMultipleChoiceInput(
+        const choiceUsers = await this.cancelWrapper(getMultipleChoiceInput,
             this.channel, captain, `Captain, choose a player to be tested for the ${roomsEnums[gameChoice]}. (${i+1}/${numTestees})` +
-            playerSelectionPrompt, playerOptions, 5000,
-        );
+            playerSelectionPrompt, playerOptions, 5000);
         if (choiceUsers == '-1') {
           skipCaptain = true;
           break;
@@ -197,20 +194,20 @@ class PushTheButton {
       'I am a crack-head.',
     ];
 
-    await this.timeout(5000);
+    await this.cancelWrapper(timeout, 5000);
     const randomPrompt = humanPrompts[Math.floor(Math.random() * humanPrompts.length)];
 
     const promises = selectedPlayers.map((selectedPlayer) => (async () => {
       if (selectedPlayer.username === 'Parell' || selectedPlayer.username === 'Keane') {
         const DMchannel = await selectedPlayer.send(randomPrompt);
-        return getMultipleChoiceInput(DMchannel, selectedPlayer, opinionText, ['1', '2', '3', '4'], 15000);
+        return this.cancelWrapper(getMultipleChoiceInput, DMchannel, selectedPlayer, opinionText, ['1', '2', '3', '4'], 15000);
       }
     })());
 
     const playerResponses = await Promise.allSettled(promises);
 
     await this.channel.send(`Here was the prompt sent to the humans:\n*${randomPrompt}*`);
-    await this.timeout(3500);
+    await this.cancelWrapper(timeout, 3500);
 
     const agreeEnums = {'1': 'Strong disagree', '2': 'Slightly disagree', '3': 'Slightly agree', '4': 'Strongly agree', '-1': 'No response given'};
 
@@ -220,9 +217,9 @@ class PushTheButton {
     };
 
     await this.channel.send('And here is how they responded:' + playerResponsesText);
-    await this.timeout(3500);
+    await this.cancelWrapper(timeout, 3500);
     await this.channel.send('Spend 30 seconds to deliberate which answers you think are suspicious. A new round will begin after.');
-    await this.timeout(6000);
+    await this.cancelWrapper(timeout, 6000);
   }
 
   async deliberationDeck(selectedPlayers) {
@@ -265,7 +262,7 @@ class PushTheButton {
     const deliberationText = `
     Reply with 1 to choose the first option, and so on. You have 20 seconds.`;
 
-    await this.timeout(5000);
+    await this.cancelWrapper(timeout, 5000);
     const keys = Object.keys(scenarios);
     const randomScenario = scenarios[keys[keys.length * Math.random() << 0]];
     let optionsText = '';
@@ -278,10 +275,10 @@ class PushTheButton {
       if (selectedPlayer.username === 'Parell' || selectedPlayer.username === 'Keane') {
         if (this.alienIDs.has(selectedPlayer.id)) {
           const DMchannel = await selectedPlayer.send(`Try your best to justify your answer once the humans' prompt is revealed.`);
-          return getMultipleChoiceInput(DMchannel, selectedPlayer, optionsText + deliberationText, ['1', '2', '3'], 15000);
+          return this.cancelWrapper(getMultipleChoiceInput, DMchannel, selectedPlayer, optionsText + deliberationText, ['1', '2', '3'], 15000);
         } else {
           const DMchannel = await selectedPlayer.send(randomScenario['prompt']);
-          return getMultipleChoiceInput(DMchannel, selectedPlayer, optionsText + deliberationText, ['1', '2', '3'], 15000);
+          return this.cancelWrapper(getMultipleChoiceInput, DMchannel, selectedPlayer, optionsText + deliberationText, ['1', '2', '3'], 15000);
         }
       }
     })());
@@ -289,7 +286,7 @@ class PushTheButton {
     const playerResponses = await Promise.allSettled(promises);
 
     await this.channel.send(`Here was the prompt sent to the humans:\n*${randomScenario['prompt']}*`);
-    await this.timeout(3500);
+    await this.cancelWrapper(timeout, 3500);
 
     let playerResponsesText = '';
     for (let i = 0; i < playerResponses.length; i++) {
@@ -300,9 +297,9 @@ class PushTheButton {
       }
     };
     await this.channel.send('And here is how they responded:' + playerResponsesText);
-    await this.timeout(3500);
+    await this.cancelWrapper(timeout, 3500);
     await this.channel.send('Spend 30 seconds to deliberate which answers you think are suspicious. A new round will begin after.');
-    await this.timeout(6000);
+    await this.cancelWrapper(timeout, 6000);
   }
 
   async writingPod(selectedPlayers) {
@@ -332,7 +329,7 @@ class PushTheButton {
     const writingPodText = `
     Reply with anything to fill in the blank. You have 20 seconds.`;
 
-    await this.timeout(5000);
+    await this.cancelWrapper(timeout, 5000);
     const keys = Object.keys(topics);
     const chosenTopic = topics[keys[keys.length * Math.random() << 0]];
     const humanPrompt = chosenTopic[Math.floor(Math.random() * chosenTopic.length)];
@@ -345,10 +342,10 @@ class PushTheButton {
       if (selectedPlayer.username === 'Parell' || selectedPlayer.username === 'Keane') {
         if (this.alienIDs.has(selectedPlayer.id)) {
           const DMchannel = await selectedPlayer.send(alienPrompt);
-          return getInput(DMchannel, selectedPlayer, writingPodText, 15000);
+          return this.cancelWrapper(getInput, DMchannel, selectedPlayer, writingPodText, 15000);
         } else {
           const DMchannel = await selectedPlayer.send(humanPrompt);
-          return getInput(DMchannel, selectedPlayer, writingPodText, 15000);
+          return this.cancelWrapper(getInput, DMchannel, selectedPlayer, writingPodText, 15000);
         }
       }
       return '-1';
@@ -357,7 +354,7 @@ class PushTheButton {
     const playerResponses = await Promise.allSettled(promises);
 
     await this.channel.send(`Here was the prompt sent to the humans:\n*${humanPrompt}*`);
-    await this.timeout(3500);
+    await this.cancelWrapper(timeout, 3500);
 
     let playerResponsesText = '';
     for (let i = 0; i < playerResponses.length; i++) {
@@ -369,9 +366,9 @@ class PushTheButton {
     };
 
     await this.channel.send('And here is how they responded:' + playerResponsesText);
-    await this.timeout(3500);
+    await this.cancelWrapper(timeout, 3500);
     await this.channel.send('Spend 30 seconds to deliberate which answers you think are suspicious. A new round will begin after.');
-    await this.timeout(6000);
+    await this.cancelWrapper(timeout, 6000);
   }
 
   async bioScanner(selectedPlayers, captain) {
@@ -456,7 +453,7 @@ class PushTheButton {
 
     const optionsBuffer = Buffer.from(optionsb64.replace(/^data:image\/png;base64,/, ''), 'base64');
 
-    await this.timeout(5000);
+    await this.cancelWrapper(timeout, 5000);
 
     const responseEnums = {};
     responseEnums[-1] = 'none.png';
@@ -480,9 +477,9 @@ class PushTheButton {
             DMchannel = await selectedPlayer.send('The captain will now describe the next image...');
           }
           if (selectedPlayers[0] == selectedPlayer) {
-            return getMultipleChoiceInput(DMchannel, selectedPlayer, bioscannerText, optionsP1, 25000);
+            return this.cancelWrapper(getMultipleChoiceInput, DMchannel, selectedPlayer, bioscannerText, optionsP1, 25000);
           } else if (selectedPlayers[1] == selectedPlayer) {
-            return getMultipleChoiceInput(DMchannel, selectedPlayer, bioscannerText, optionsP2, 25000);
+            return this.cancelWrapper(getMultipleChoiceInput, DMchannel, selectedPlayer, bioscannerText, optionsP2, 25000);
           }
         } else {
           return '-1';
@@ -518,7 +515,7 @@ class PushTheButton {
       await this.bioScan(selectedPlayers, captain);
     } else {
       await this.channel.send(`Here were the glyphs the captain received:`, captainBuffer);
-      await this.timeout(3500);
+      await this.cancelWrapper(timeout, 3500);
 
       await this.channel.send(`And here were the players' chosen glyphs:`);
 
@@ -533,15 +530,15 @@ class PushTheButton {
         const responseBuffer = Buffer.from(responseb64.replace(/^data:image\/png;base64,/, ''), 'base64');
         this.channel.send(`**${selectedPlayers[i].username}**:`, responseBuffer);
       }
-      await this.timeout(3500);
+      await this.cancelWrapper(timeout, 3500);
       await this.channel.send('Spend 30 seconds to deliberate which answers you think are suspicious. A new round will begin after.');
-      await this.timeout(6000);
+      await this.cancelWrapper(timeout, 6000);
     }
   }
 
   async bioScan(selectedPlayers, captain) {
     await this.channel.send('The test has passed! The bioscanner will now proceed to scan a player\'s true identity.');
-    const response = await getMultipleChoiceInput(this.channel, captain,
+    const response = await this.cancelWrapper(getMultipleChoiceInput, this.channel, captain,
         'Captain, choose a player to be scanned. The results will be shown to only your eyes, ' +
         'but feel free to share them with the rest of the players.' +
         `\n\t\t1. **${selectedPlayers[0].username}**\n\t\t2. **${selectedPlayers[1].username}**`,
@@ -559,7 +556,7 @@ class PushTheButton {
     }
 
     await this.channel.send('The next round will begin shortly!');
-    await this.timeout(5000);
+    await this.cancelWrapper(timeout, 5000);
   }
 
   async extractionRoom(pusher) {
@@ -567,7 +564,7 @@ class PushTheButton {
     unpicked = unpicked.filter((value) => value != pusher.id);
 
     await this.channel.send(undefined, imagesFilepath + 'buttonPushed.png');
-    await this.timeout(2500);
+    await this.cancelWrapper(timeout, 2500);
     await this.channel.send(`${pusher.username} has pushed the button! The main game timer has been stopped and players will vote on `+
     `ejecting the ${this.numAliens} suspected aliens chosen by the button presser! The extraction will only proceed with an unanimous vote.`);
 
@@ -585,7 +582,7 @@ class PushTheButton {
         playerSelectionPrompt += `\n\t\t\t\t**${i+1}. ${this.players[unpicked[i]].user.username}**`;
         playerOptions.push('' + (i+1));
       }
-      const choiceUsers = await getMultipleChoiceInput(
+      const choiceUsers = await this.cancelWrapper(getMultipleChoiceInput,
           this.channel, pusher, `${pusher.username}, choose a player to be ejected. (${i+1}/${this.numAliens})` +
             playerSelectionPrompt, playerOptions, 5000,
       );
@@ -602,7 +599,7 @@ class PushTheButton {
       voteResult = await this.buttonVote(unpicked);
       if (voteResult == true) {
         await this.channel.send(`The vote has passed! The extraction chamber ejects along with its contents...`);
-        await this.timeout(2000);
+        await this.cancelWrapper(timeout, 2000);
 
         let ejectPrompt = '';
         let alienWin = false;
@@ -616,7 +613,7 @@ class PushTheButton {
         });
 
         await this.channel.send(`And the identities of those ejected are...`);
-        await this.timeout(2000);
+        await this.cancelWrapper(timeout, 2000);
         await this.channel.send(`_____________________________________` + ejectPrompt);
 
         if (alienWin) {
@@ -660,7 +657,7 @@ class PushTheButton {
     const promises = voters.map((voter) => (async () => {
       if (voter.username === 'Parell' || voter.username === 'Keane') {
         const DMchannel = await voter.send(`Vote on whether to eject the following players:` + ejectPrompt);
-        return getMultipleChoiceInput(DMchannel, voter, `Reply 1 for eject, 2 for do not eject.`, ['1', '2'], 15000);
+        return this.cancelWrapper(getMultipleChoiceInput, DMchannel, voter, `Reply 1 for eject, 2 for do not eject.`, ['1', '2'], 15000);
       }
     })());
 
