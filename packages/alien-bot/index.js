@@ -6,7 +6,8 @@ const fs = require('fs');
 const mergeImages = require('merge-images');
 const {Canvas, Image} = require('canvas');
 
-const imagesFilePath = '/Users/kevsa/Documents/alien/alien-bot/packages/alien-bot/images/';
+const bioimagesFilepath = '/Users/kevsa/Documents/alien/alien-bot/packages/alien-bot/images/';
+const imagesFilepath = '/Users/kevsa/Documents/alien/alien-bot/packages/alien-bot/nonbioimages';
 /**
  * Register command handlers and start the Bot instance.
  * @param {Bot} bot
@@ -20,12 +21,21 @@ class PushTheButton {
     this.players = {};
     this.round = 0;
     this.ended = false;
+    this.hasButtoned = [];
+    this.buttonedState = false;
   }
 
   timeout(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
+  cancelWrapper(fn, channel, user, text, ...args) {
+    if (this.buttonedState === true) {
+      throw (new Error('cancel'));
+    } else {
+      return fn(channel, user, text, ...args);
+    }
+  }
   async playGame() {
     /* if (this.hasStarted === true) {
       return;
@@ -43,7 +53,7 @@ class PushTheButton {
       this.numAliens = 3;
     }
 
-    let unpicked = playerIDs;
+    let unpicked = playerIDs.slice();
     this.alienIDs = new Set();
     for (let i = 0; i < this.numAliens; i++) {
       const chosenAlienPlayer = unpicked[unpicked.length * Math.random() << 0];
@@ -66,19 +76,18 @@ class PushTheButton {
         break;
       }
       let skipCaptain = false;
+      this.buttonedState = false;
       //  const captain = this.players[this.captainIDs[this.round % this.captainIDs.length]].user;
       const captain = this.players['808288156667346954'].user;
       await this.channel.send(`Round ${this.round + 1} has started! ${captain.username} will be the captain for this round.`);
       /* Ask captain which examination to use. */
-      const gameChoice = await getMultipleChoiceInput(
-          this.channel, captain,
+      const gameChoice = await cancelWrapper(getMultipleChoiceInput, this.channel, captain,
           `Captain, choose a test:
         **1. Opinion Hold**
         **2. Deliberation Deck**
         **3. Writing Pod**
         **4. Bioscanner**`,
-          ['1', '2', '3', '4'], 15000,
-      );
+          ['1', '2', '3', '4'], 15000);
 
       if (gameChoice == undefined) {
         await this.channel.send(`Looks like our captain couldn't make a decision in time! A new captain will be selected shortly.`);
@@ -122,10 +131,10 @@ class PushTheButton {
           playerOptions.push('' + (i+1));
         }
         const choiceUsers = await getMultipleChoiceInput(
-            this.channel, captain, `Captain, choose a player to be tested for the ${roomsEnums[gameChoice]}. (${i}/2)` +
+            this.channel, captain, `Captain, choose a player to be tested for the ${roomsEnums[gameChoice]}. (${i+1}/${numTestees})` +
             playerSelectionPrompt, playerOptions, 5000,
         );
-        if (choiceUsers == undefined) {
+        if (choiceUsers == '-1') {
           skipCaptain = true;
           break;
         }
@@ -134,8 +143,10 @@ class PushTheButton {
         unpicked = unpicked.filter((value) => value !== playerEnums[choiceUsers]);
         selectedPlayers.push(selectedPlayer);
       }
-      if (skipCaptain == true) {
-        await this.channel.send(`Looks like our captain couldn't make a decision in time! A new captain will be now be selected`);
+      if (skipCaptain === true) {
+        if (this.buttonedState === false) {
+          await this.channel.send(`Looks like our captain couldn't make a decision in time! A new captain will be now be selected`);
+        }
         this.round++;
         break;
       }
@@ -151,7 +162,7 @@ class PushTheButton {
           await this.writingPod(selectedPlayers);
           break;
         case '4':
-          await this.bioScanner(selectedPlayers);
+          await this.bioScanner(selectedPlayers, captain);
       }
 
       this.round++;
@@ -363,7 +374,7 @@ class PushTheButton {
     await this.timeout(6000);
   }
 
-  async bioScanner(selectedPlayers) {
+  async bioScanner(selectedPlayers, captain) {
     await this.channel.send(
         'Two players that are chosen by the captain see a screen with ten glyphs. ' +
         'The captain receives three of those glyphs and must describe them to the two players. ' +
@@ -381,7 +392,7 @@ class PushTheButton {
 
     const allImages = await new Promise((resolve, reject) => {
       const images = {};
-      fs.readdir(imagesFilePath, (err, files) => {
+      fs.readdir(bioimagesFilepath, (err, files) => {
         files.forEach((file) => {
           const category = file.substr(0, file.indexOf('_'));
           if (file !== 'canvas.PNG' && file !== 'none.png' && file !== 'canvas2.png') {
@@ -427,21 +438,20 @@ class PushTheButton {
       [selectedUnhackedImages[i], selectedUnhackedImages[j]] = [selectedUnhackedImages[j], selectedUnhackedImages[i]];
     }
 
-
     const optionsb64 = await mergeImages([
-      {src: imagesFilePath + 'canvas.png', x: 0, y: 0},
-      {src: imagesFilePath + selectedUnhackedImages[0], x: 0, y: 0},
-      {src: imagesFilePath + selectedUnhackedImages[1], x: 175, y: 0},
-      {src: imagesFilePath + selectedUnhackedImages[2], x: 350, y: 0},
-      {src: imagesFilePath + selectedUnhackedImages[3], x: 0, y: 175},
-      {src: imagesFilePath + selectedUnhackedImages[4], x: 175, y: 175},
-      {src: imagesFilePath + selectedUnhackedImages[5], x: 350, y: 175},
-      {src: imagesFilePath + selectedUnhackedImages[6], x: 0, y: 350},
-      {src: imagesFilePath + selectedUnhackedImages[7], x: 175, y: 350},
-      {src: imagesFilePath + selectedUnhackedImages[8], x: 350, y: 350},
-      {src: imagesFilePath + selectedUnhackedImages[9], x: 0, y: 525},
-      {src: imagesFilePath + selectedUnhackedImages[10], x: 175, y: 525},
-      {src: imagesFilePath + selectedUnhackedImages[11], x: 350, y: 525},
+      {src: bioimagesFilepath + 'canvas.png', x: 0, y: 0},
+      {src: bioimagesFilepath + selectedUnhackedImages[0], x: 0, y: 0},
+      {src: bioimagesFilepath + selectedUnhackedImages[1], x: 175, y: 0},
+      {src: bioimagesFilepath + selectedUnhackedImages[2], x: 350, y: 0},
+      {src: bioimagesFilepath + selectedUnhackedImages[3], x: 0, y: 175},
+      {src: bioimagesFilepath + selectedUnhackedImages[4], x: 175, y: 175},
+      {src: bioimagesFilepath + selectedUnhackedImages[5], x: 350, y: 175},
+      {src: bioimagesFilepath + selectedUnhackedImages[6], x: 0, y: 350},
+      {src: bioimagesFilepath + selectedUnhackedImages[7], x: 175, y: 350},
+      {src: bioimagesFilepath + selectedUnhackedImages[8], x: 350, y: 350},
+      {src: bioimagesFilepath + selectedUnhackedImages[9], x: 0, y: 525},
+      {src: bioimagesFilepath + selectedUnhackedImages[10], x: 175, y: 525},
+      {src: bioimagesFilepath + selectedUnhackedImages[11], x: 350, y: 525},
     ], {Canvas: Canvas, Image: Image});
 
     const optionsBuffer = Buffer.from(optionsb64.replace(/^data:image\/png;base64,/, ''), 'base64');
@@ -487,33 +497,179 @@ class PushTheButton {
 
     console.log(captainImages);
     const captainb64 = await mergeImages([
-      {src: imagesFilePath + 'canvas2.png', x: 0, y: 0},
-      {src: imagesFilePath + captainImages[0], x: 0, y: 0},
-      {src: imagesFilePath + captainImages[1], x: 175, y: 0},
-      {src: imagesFilePath + captainImages[2], x: 350, y: 0},
+      {src: bioimagesFilepath + 'canvas2.png', x: 0, y: 0},
+      {src: bioimagesFilepath + captainImages[0], x: 0, y: 0},
+      {src: bioimagesFilepath + captainImages[1], x: 175, y: 0},
+      {src: bioimagesFilepath + captainImages[2], x: 350, y: 0},
     ], {Canvas: Canvas, Image: Image});
 
     const captainBuffer = Buffer.from(captainb64.replace(/^data:image\/png;base64,/, ''), 'base64');
 
-    await this.channel.send(`Here were the glyphs the captain received:`, captainBuffer);
-    await this.timeout(3500);
-
-    await this.channel.send(`And here were the players' chosen glyphs:`);
-
-    console.log(totalResponses);
+    const passed = [true, true];
     for (let i = 0; i < 2; i++) {
-      const responseb64 = await mergeImages([
-        {src: imagesFilePath + 'canvas2.png', x: 0, y: 0},
-        {src: imagesFilePath + totalResponses[i][0], x: 0, y: 0},
-        {src: imagesFilePath + totalResponses[i][1], x: 175, y: 0},
-        {src: imagesFilePath + totalResponses[i][2], x: 350, y: 0},
-      ], {Canvas: Canvas, Image: Image});
-      const responseBuffer = Buffer.from(responseb64.replace(/^data:image\/png;base64,/, ''), 'base64');
-      this.channel.send(`**${selectedPlayers[i].username}**:`, responseBuffer);
+      for (let j = 0; j < 3; j++) {
+        if (!captainImages.includes(totalResponses[i][j])) {
+          passed[i] = false;
+        }
+      }
     }
-    await this.timeout(3500);
-    await this.channel.send('Spend 30 seconds to deliberate which answers you think are suspicious. A new round will begin after.');
-    await this.timeout(6000);
+
+    if (passed[0] && passed[1]) {
+      await this.bioScan(selectedPlayers, captain);
+    } else {
+      await this.channel.send(`Here were the glyphs the captain received:`, captainBuffer);
+      await this.timeout(3500);
+
+      await this.channel.send(`And here were the players' chosen glyphs:`);
+
+      console.log(totalResponses);
+      for (let i = 0; i < 2; i++) {
+        const responseb64 = await mergeImages([
+          {src: bioimagesFilepath + 'canvas2.png', x: 0, y: 0},
+          {src: bioimagesFilepath + totalResponses[i][0], x: 0, y: 0},
+          {src: bioimagesFilepath + totalResponses[i][1], x: 175, y: 0},
+          {src: bioimagesFilepath + totalResponses[i][2], x: 350, y: 0},
+        ], {Canvas: Canvas, Image: Image});
+        const responseBuffer = Buffer.from(responseb64.replace(/^data:image\/png;base64,/, ''), 'base64');
+        this.channel.send(`**${selectedPlayers[i].username}**:`, responseBuffer);
+      }
+      await this.timeout(3500);
+      await this.channel.send('Spend 30 seconds to deliberate which answers you think are suspicious. A new round will begin after.');
+      await this.timeout(6000);
+    }
+  }
+
+  async bioScan(selectedPlayers, captain) {
+    await this.channel.send('The test has passed! The bioscanner will now proceed to scan a player\'s true identity.');
+    const response = await getMultipleChoiceInput(this.channel, captain,
+        'Captain, choose a player to be scanned. The results will be shown to only your eyes, ' +
+        'but feel free to share them with the rest of the players.' +
+        `\n\t\t1. **${selectedPlayers[0].username}**\n\t\t2. **${selectedPlayers[1].username}**`,
+        [1, 2], 15000);
+
+    if (response == '-1') {
+      await this.channel.send('The testees escape scanning this time, as the captain couldn\'t make a decision in time!');
+    } else {
+      const selectedScanee = selectedPlayers[parseInt(response)];
+      if (this.alienIDs.has(selectedScanee.id)) {
+        await captain.send(`${selectedScanee.username} is an alien.`);
+      } else {
+        await captain.send(`${selectedScanee.username} is a human.`);
+      }
+    }
+
+    await this.channel.send('The next round will begin shortly!');
+    await this.timeout(5000);
+  }
+
+  async extractionRoom(pusher) {
+    let unpicked = Object.keys(this.players);
+    unpicked = unpicked.filter((value) => value != pusher.id);
+
+    await this.channel.send(undefined, imagesFilepath + 'buttonPushed.png');
+    await this.timeout(2500);
+    await this.channel.send(`${pusher.username} has pushed the button! The main game timer has been stopped and players will vote on `+
+    `ejecting the ${this.numAliens} suspected aliens chosen by the button presser! The extraction will only proceed with an unanimous vote.`);
+
+    const selectedPlayers = [];
+    let selectedPlayer;
+    let skipExtraction = false;
+    for (let i = 0; i < this.numAliens; i++) {
+      const playerEnums = {};
+      /* Ask pusher which players to eject. */
+      let playerSelectionPrompt = '';
+      const playerOptions = [];
+
+      for (let i = 0; i < unpicked.length; i++) {
+        playerEnums[i+1] = unpicked[i];
+        playerSelectionPrompt += `\n\t\t\t\t**${i+1}. ${this.players[unpicked[i]].user.username}**`;
+        playerOptions.push('' + (i+1));
+      }
+      const choiceUsers = await getMultipleChoiceInput(
+          this.channel, pusher, `${pusher.username}, choose a player to be ejected. (${i+1}/${this.numAliens})` +
+            playerSelectionPrompt, playerOptions, 5000,
+      );
+      if (choiceUsers == undefined) {
+        skipExtraction = true;
+        break;
+      }
+      selectedPlayer = this.players[playerEnums[choiceUsers]].user;
+      await this.channel.send(`${selectedPlayer.username} was selected.`);
+      unpicked = unpicked.filter((value) => value !== playerEnums[choiceUsers]);
+      selectedPlayers.push(selectedPlayer);
+    }
+    if (skipExtraction == false) {
+      voteResult = await this.buttonVote(unpicked);
+      if (voteResult == true) {
+        await this.channel.send(`The vote has passed! The extraction chamber ejects along with its contents...`);
+        await this.timeout(2000);
+
+        let ejectPrompt = '';
+        let alienWin = false;
+        selectedPlayers.forEach((selectedPlayer) => {
+          if (this.alienIDs.includes(selectedPlayers.id)) {
+            ejectPrompt += `\n\t\t*${selectedPlayer.username}*: **ALIEN**`;
+          } else {
+            alienWin = true;
+            ejectPrompt += `\n\t\t*${selectedPlayer.username}*: **HUMAN**`;
+          }
+        });
+
+        await this.channel.send(`And the identities of those ejected are...`);
+        await this.timeout(2000);
+        await this.channel.send(`_____________________________________` + ejectPrompt);
+
+        if (alienWin) {
+          const remainingAliens = [];
+          selectedIDs = selectedPlayers.map((selectedPlayer) => selectedPlayer.id);
+          this.alienIDs.forEach((alienID) => {
+            if (selectedIDs.include(alienID) === false) {
+              remainingAliens.push(this.players[alienID].user);
+            }
+          });
+
+          if (remainingAliens.length === 1) {
+            await this.channel.send(`${remainingAliens[0].username}, the remaining alien, ` +
+            `slurps the rest of the crew members on board.`);
+          } else if (remainingAliens.length === 2) {
+            await this.channel.send(`${remainingAliens[0]} and ${remainingAliens[1]}, the remaining aliens, enjoy their buffet of humans.`);
+          } else {
+            //  3 remaining aliens
+            await this.channel.send(`As they eviscerated the crew members, ${remainingAliens[0]}, ` +
+            `${remainingAliens[1]}, and ${remainingAliens[2]} wonder ` +
+            `in disbelief how the humans didn't manage to catch a single one of them.`);
+          }
+        } else {
+          await this.channel.send('The humans on board live to see another day.');
+        }
+      }
+    } else {
+      await this.channel.send(`Looks like our button pusher couldn't make a decision in time! A new round will now begin`);
+    }
+  }
+
+  async buttonVote(voterIDs) {
+    const voters = voterIDs.map((voterID) => {
+      return this.players[voterID].user;
+    });
+
+    let ejectPrompt = '';
+    selectedPlayers.forEach((selectedPlayer) => {
+      ejectPrompt += `\n\t\t**${selectedPlayer.username}**`;
+    });
+    const promises = voters.map((voter) => (async () => {
+      if (voter.username === 'Parell' || voter.username === 'Keane') {
+        const DMchannel = await voter.send(`Vote on whether to eject the following players:` + ejectPrompt);
+        return getMultipleChoiceInput(DMchannel, voter, `Reply 1 for eject, 2 for do not eject.`, ['1', '2'], 15000);
+      }
+    })());
+
+    const playerResponses = await Promise.allSettled(promises);
+    const voteResult = playerResponses.every((playerResponse) => {
+      return playerResponses.value === '1';
+    });
+
+    return voteResult;
   }
   /**
    * @param {Message} message
@@ -522,8 +678,6 @@ class PushTheButton {
     this.channel.send(message.user.username +
       ` is looking to start a game of Push the Button!
       Type \'!ptb join\' to play!`);
-
-    const channelID = message.channel.id;
 
     this.players[message.user.id] = {
       user: message.user,
@@ -556,20 +710,6 @@ class PushTheButton {
       clearTimeout(this.startTimeout);
       await this.playGame(this.channel);
     }
-  };
-
-  async testCallback(message) {
-    const choice = await getMultipleChoiceInput(
-        message.channel, message.author, `${message.user.username}, choose a test!`, 10, 'choice1', 'choice2',
-    );
-    console.log(choice);
-  };
-
-  async buttonCallback(message) {
-    const choice = await executeMenu(
-        message.channel, message.author, 'menu text!', 10, 'choice1', 'choice2',
-    );
-    console.log(choice);
   };
 
   async voteCallback(message) {
@@ -637,6 +777,21 @@ const commands = {
           }
         },
       },
+      button: {
+        subs: {},
+        callback: async (message) => {
+          if (gameInstances[message.channel.id]) {
+            const ptb = gameInstances[message.channel.id];
+            if (ptb.buttonable === true) {
+              if (ptb.buttonedState === false) {
+                ptb.buttonedState = true;
+                ptb.hasButtoned.unshift(message.user);
+              }
+            }
+            ptb.buttonedState = true;
+          }
+        },
+      },
       help: {
         subs: {},
         callback: async (message) => {
@@ -655,7 +810,7 @@ const bot1 = new Client('ODA4MjA1NjUwODAxOTgzNTE4.YCDKKg.TXcMPKmcyIAP4eBeZJTa5EX
 const bot2 = new Client('ODA4MjA1NzMxODkwNzI0ODk0.YCDKPg.X-imxUG0-Hc4Gd54ija1VUkWGZ4'); // Mai
 const bot3 = new Client('ODA4Mjg4MTU2NjY3MzQ2OTU0.YCEXAQ.rT1vaUnXFaG4YSyg5Zgab9MzTSE'); // Yui
 
-/* fs.readFile(imagesFilePath + 'yui1.png', (err, data) => {
+/* fs.readFile(bioimagesFilepath + 'yui1.png', (err, data) => {
   if (err) throw err;
   buffer = data;
   console.log(data);
@@ -693,7 +848,7 @@ bot3.on('message', (message) => {
   } else if (message.content.includes('1. Opinion Hold')) {
     message.channel.send('4');
   } else if (message.content.includes('yahallo!')) {
-    // message.channel.send(undefined, imagesFilePath + 'yui1.PNG');
+    // message.channel.send(undefined, bioimagesFilepath + 'yui1.PNG');
     message.channel.send(undefined, buffer);
   }
 
