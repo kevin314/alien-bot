@@ -59,7 +59,7 @@ class Channel {
     }
 
     return new Promise((resolve, reject) => {
-       limiters[this.id].submit(
+      limiters[this.id].submit(
           form.submit.bind(form),
           {
             protocol: 'https:',
