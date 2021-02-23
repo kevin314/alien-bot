@@ -14,6 +14,7 @@ class Channel {
   constructor(channelJsonObject, client) {
     this.id = channelJsonObject['id'];
     this.client = client;
+    this.channelJsonObject = channelJsonObject;
   }
 
   /**

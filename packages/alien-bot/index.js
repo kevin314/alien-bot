@@ -1,10 +1,11 @@
 const {Client} = require('eminem');
-const {eminemMessageReceivedHandler, getInput, getMultipleChoiceInput, parseMessage, timeout, AlreadyWaitingForInputError} = require('hal-9000');
+const {eminemMessageReceivedHandler, getInput, getMultipleChoiceInput, parseMessage, AlreadyWaitingForInputError} = require('hal-9000');
 const Message = require('eminem/Message');
 const Channel = require('eminem/Channel');
 const fs = require('fs');
 const mergeImages = require('merge-images');
 const {Canvas, Image} = require('canvas');
+const {EventEmitter} = require('events');
 
 const bioimagesFilepath = '/Users/kevsa/Documents/alien/alien-bot/packages/alien-bot/images/';
 const imagesFilepath = '/Users/kevsa/Documents/alien/alien-bot/packages/alien-bot/nonbioimages/';
@@ -15,9 +16,16 @@ const imagesFilepath = '/Users/kevsa/Documents/alien/alien-bot/packages/alien-bo
  */
 class PushTheButton {
   constructor(channel) {
-    this.channel = channel,
-    // console.log(this.channel);
-    this.hasStarted = false,
+    console.log(channel);
+    this.channel = new Channel(channel.channelJsonObject, channel.client);
+    this.channel.send = this.cancelWrapper(this.channel.send.bind(this.channel)).bind(this);
+    this.em = new EventEmitter();
+    this.getInput = (...args) => {
+      return this.cancelWrapper(getInput).call(this, ...args, this.em);
+    };
+    this.getMultipleChoiceInput = this.cancelWrapper(getMultipleChoiceInput).bind(this);
+    this.startedFrom;
+    this.hasStarted = false;
     this.players = {};
     this.round = 0;
     this.ended = false;
@@ -25,21 +33,36 @@ class PushTheButton {
     this.buttonedState = false;
     this.buttonable = false;
     this.wasButtoned = false;
+    this.timeout = this.cancelWrapper(this.timeout.bind(this)).bind(this);
+    this.timeRunout = false;
+    this.timeoutResolve = () => {};
   }
 
-  cancelWrapper(fn, ...args) {
-    if (this.buttonedState === true) {
-      throw (new Error('cancel'));
-    } else {
-      return fn(...args);
-    }
+  cancelWrapper(fn) {
+    return (...args) => {
+      if (this.buttonedState === true || this.timeRunout === true || this.ended) {
+        throw (new Error('cancel'));
+      } else {
+        return fn(...args);
+      }
+    };
   }
+
+  timeout(ms) {
+    return new Promise((resolve) => {
+      this.timeoutResolve = resolve;
+      setTimeout(resolve, ms);
+    });
+  }
+
   async playGame() {
-    /* if (this.hasStarted === true) {
-      return;
-    } */
+    setTimeout(async () => {
+      this.timeRunout = true;
+      await this.channel.send('Time has run out for the humans');
+    }, 600000);
+
     this.hasStarted = true;
-    this.channel.send('Push the Button now starting...');
+    await this.channel.send('Push the Button now starting...');
 
     const playerIDs = Object.keys(this.players);
 
@@ -68,114 +91,89 @@ class PushTheButton {
     }
     this.captainIDs = playerIDs;
 
-    while (this.hasStarted) {
-      this.buttonable = true;
-      let wasButtoned = false;
-      if (this.ended === true) {
-        this.channel.send('Game has ended.');
-        break;
-      }
-      let skipCaptain = false;
-      //  const captain = this.players[this.captainIDs[this.round % this.captainIDs.length]].user;
-      const captain = this.players['808288156667346954'].user;
-      await this.channel.send(`Round ${this.round + 1} has started! ${captain.username} will be the captain for this round.`);
-      /* Ask captain which examination to use. */
-      let gameChoice;
+    while (this.ended == false && this.hasStarted) {
       try {
-        gameChoice = await this.cancelWrapper(getMultipleChoiceInput, this.channel, captain,
+        this.buttonable = true;
+        const wasButtoned = false;
+        let skipCaptain = false;
+        //  const captain = this.players[this.captainIDs[this.round % this.captainIDs.length]].user;
+        const captain = this.players['808288156667346954'].user;
+        await this.channel.send(`Round ${this.round + 1} has started! ${captain.username} will be the captain for this round.`);
+        /* Ask captain which examination to use. */
+
+        const gameChoice = await this.getMultipleChoiceInput( this.channel, captain,
             `Captain, choose a test:
-          **1. Opinion Hold**
-          **2. Deliberation Deck**
-          **3. Writing Pod**
-          **4. Bioscanner**`,
-            ['1', '2', '3', '4'], 15000);
-      } catch (err) {
-        console.log(err);
-        await this.extractionRoom(this.hasButtoned[0]);
-        this.buttonedState = false;
-        this.round++;
-        continue;
-      }
+            **1. Opinion Hold**
+            **2. Deliberation Deck**
+            **3. Writing Pod**
+            **4. Bioscanner**`,
+            ['1', '2', '3', '4'], 15000, this.em);
 
-      if (gameChoice === '-1') {
-        await this.channel.send(`Looks like our captain couldn't make a decision in time! A new captain will be selected shortly.`);
 
-        try {
-          await this.cancelWrapper(timeout, 5000);
-        } catch (err) {
+        if (gameChoice === '-1') {
+          await this.channel.send(`Looks like our captain couldn't make a decision in time! A new captain will be selected shortly.`);
+          await this.timeout(5000);
           console.log(err);
           await this.extractionRoom(this.hasButtoned[0]);
           this.buttonedState = false;
+
+          this.round++;
+          continue;
         }
-        this.round++;
-        continue;
-      }
-      const roomsEnums = {'1': 'Opinion Hold', '2': 'Deliberation Deck', '3': 'Writing Pod', '4': 'Bioscanner'};
-      unpicked = playerIDs;
-      unpicked = unpicked.filter((value) => value != captain.id);
+        const roomsEnums = {'1': 'Opinion Hold', '2': 'Deliberation Deck', '3': 'Writing Pod', '4': 'Bioscanner'};
+        unpicked = playerIDs;
+        unpicked = unpicked.filter((value) => value != captain.id);
 
-      await this.channel.send(`${roomsEnums[gameChoice]} selected for this round`);
+        await this.channel.send(`${roomsEnums[gameChoice]} selected for this round`);
 
-      let maxTestees;
-      let numTestees;
-      if (playerIDs.length >= 4 && playerIDs.length < 6) {
-        maxTestees = 2;
-      } else if (playerIDs.length >= 6 && playerIDs.length < 9) {
-        maxTestees = 3;
-      } else {
-        maxTestees = 4;
-      }
-      if (gameChoice === '4') {
-        numTestees = 2;
-      } else {
-        numTestees = maxTestees;
-      }
-
-      const selectedPlayers = [];
-      let selectedPlayer;
-      for (let i = 0; i < numTestees; i++) {
-        const playerEnums = {};
-        /* Ask captain which players to examine. */
-        //  Bioscanner only has two testees
-        let playerSelectionPrompt = '';
-        const playerOptions = [];
-
-        for (let i = 0; i < unpicked.length; i++) {
-          playerEnums[i+1] = unpicked[i];
-          playerSelectionPrompt += `\n\t\t\t\t**${i+1}. ${this.players[unpicked[i]].user.username}**`;
-          playerOptions.push('' + (i+1));
+        let maxTestees;
+        let numTestees;
+        if (playerIDs.length >= 4 && playerIDs.length < 6) {
+          maxTestees = 2;
+        } else if (playerIDs.length >= 6 && playerIDs.length < 9) {
+          maxTestees = 3;
+        } else {
+          maxTestees = 4;
         }
-        let choiceUsers;
-        try {
-          choiceUsers = await this.cancelWrapper(getMultipleChoiceInput,
+        if (gameChoice === '4') {
+          numTestees = 2;
+        } else {
+          numTestees = maxTestees;
+        }
+
+        const selectedPlayers = [];
+        let selectedPlayer;
+        for (let i = 0; i < numTestees; i++) {
+          const playerEnums = {};
+          /* Ask captain which players to examine. */
+          //  Bioscanner only has two testees
+          let playerSelectionPrompt = '';
+          const playerOptions = [];
+
+          for (let i = 0; i < unpicked.length; i++) {
+            playerEnums[i+1] = unpicked[i];
+            playerSelectionPrompt += `\n\t\t\t\t**${i+1}. ${this.players[unpicked[i]].user.username}**`;
+            playerOptions.push('' + (i+1));
+          }
+          const choiceUsers = await this.getMultipleChoiceInput(
               this.channel, captain, `Captain, choose a player to be tested for the ${roomsEnums[gameChoice]}. (${i+1}/${numTestees})` +
-              playerSelectionPrompt, playerOptions, 5000);
-        } catch (err) {
-          console.log(err);
-          await this.extractionRoom(this.hasButtoned[0]);
-          this.buttonedState = false;
-          skipCaptain = true;
-          wasButtoned = true;
-          break;
-        }
-        if (choiceUsers == '-1') {
-          skipCaptain = true;
-          break;
-        }
-        selectedPlayer = this.players[playerEnums[choiceUsers]].user;
-        await this.channel.send(`${selectedPlayer.username} was selected.`);
-        unpicked = unpicked.filter((value) => value !== playerEnums[choiceUsers]);
-        selectedPlayers.push(selectedPlayer);
-      }
-      if (skipCaptain === true) {
-        if (wasButtoned === false) {
-          await this.channel.send(`Looks like our captain couldn't make a decision in time! A new captain will be now be selected`);
-        }
-        this.round++;
-        continue;
-      }
+                playerSelectionPrompt, playerOptions, 5000, this.em);
 
-      try {
+          if (choiceUsers == '-1') {
+            skipCaptain = true;
+            break;
+          }
+          selectedPlayer = this.players[playerEnums[choiceUsers]].user;
+          await this.channel.send(`${selectedPlayer.username} was selected.`);
+          unpicked = unpicked.filter((value) => value !== playerEnums[choiceUsers]);
+          selectedPlayers.push(selectedPlayer);
+        }
+        if (skipCaptain === true) {
+          await this.channel.send(`Looks like our captain couldn't make a decision in time! A new captain will be now be selected`);
+          this.round++;
+          continue;
+        }
+
         switch (gameChoice) {
           case '1':
             await this.opinionHold(selectedPlayers);
@@ -191,10 +189,9 @@ class PushTheButton {
         }
       } catch (err) {
         console.log(err);
-        await this.extractionRoom(this.hasButtoned[0]);
         this.buttonedState = false;
+        await this.extractionRoom(this.hasButtoned[0]);
       }
-
       this.round++;
     }
   }
@@ -227,20 +224,20 @@ class PushTheButton {
       'I am a crack-head.',
     ];
 
-    await this.cancelWrapper(timeout, 5000);
+    await this.timeout(5000);
     const randomPrompt = humanPrompts[Math.floor(Math.random() * humanPrompts.length)];
 
     const promises = selectedPlayers.map((selectedPlayer) => (async () => {
       if (selectedPlayer.username === 'Parell' || selectedPlayer.username === 'Keane') {
         const DMchannel = await selectedPlayer.send(randomPrompt);
-        return this.cancelWrapper(getMultipleChoiceInput, DMchannel, selectedPlayer, opinionText, ['1', '2', '3', '4'], 15000);
+        return this.getMultipleChoiceInput(DMchannel, selectedPlayer, opinionText, ['1', '2', '3', '4'], 15000, this.em);
       }
     })());
 
     const playerResponses = await Promise.allSettled(promises);
 
     await this.channel.send(`Here was the prompt sent to the humans:\n*${randomPrompt}*`);
-    await this.cancelWrapper(timeout, 3500);
+    await this.timeout(3500);
 
     const agreeEnums = {'1': 'Strong disagree', '2': 'Slightly disagree', '3': 'Slightly agree', '4': 'Strongly agree', '-1': 'No response given'};
 
@@ -250,9 +247,9 @@ class PushTheButton {
     };
 
     await this.channel.send('And here is how they responded:' + playerResponsesText);
-    await this.cancelWrapper(timeout, 3500);
+    await this.timeout(3500);
     await this.channel.send('Spend 30 seconds to deliberate which answers you think are suspicious. A new round will begin after.');
-    await this.cancelWrapper(timeout, 6000);
+    await this.timeout(6000);
   }
 
   async deliberationDeck(selectedPlayers) {
@@ -295,7 +292,7 @@ class PushTheButton {
     const deliberationText = `
     Reply with 1 to choose the first option, and so on. You have 20 seconds.`;
 
-    await this.cancelWrapper(timeout, 5000);
+    await this.timeout(5000);
     const keys = Object.keys(scenarios);
     const randomScenario = scenarios[keys[keys.length * Math.random() << 0]];
     let optionsText = '';
@@ -308,10 +305,10 @@ class PushTheButton {
       if (selectedPlayer.username === 'Parell' || selectedPlayer.username === 'Keane') {
         if (this.alienIDs.has(selectedPlayer.id)) {
           const DMchannel = await selectedPlayer.send(`Try your best to justify your answer once the humans' prompt is revealed.`);
-          return this.cancelWrapper(getMultipleChoiceInput, DMchannel, selectedPlayer, optionsText + deliberationText, ['1', '2', '3'], 15000);
+          return this.getMultipleChoiceInput(DMchannel, selectedPlayer, optionsText + deliberationText, ['1', '2', '3'], 15000, this.em);
         } else {
           const DMchannel = await selectedPlayer.send(randomScenario['prompt']);
-          return this.cancelWrapper(getMultipleChoiceInput, DMchannel, selectedPlayer, optionsText + deliberationText, ['1', '2', '3'], 15000);
+          return this.getMultipleChoiceInput(DMchannel, selectedPlayer, optionsText + deliberationText, ['1', '2', '3'], 15000, this.em);
         }
       }
     })());
@@ -319,7 +316,7 @@ class PushTheButton {
     const playerResponses = await Promise.allSettled(promises);
 
     await this.channel.send(`Here was the prompt sent to the humans:\n*${randomScenario['prompt']}*`);
-    await this.cancelWrapper(timeout, 3500);
+    await this.timeout(3500);
 
     let playerResponsesText = '';
     for (let i = 0; i < playerResponses.length; i++) {
@@ -330,9 +327,9 @@ class PushTheButton {
       }
     };
     await this.channel.send('And here is how they responded:' + playerResponsesText);
-    await this.cancelWrapper(timeout, 3500);
+    await this.timeout(3500);
     await this.channel.send('Spend 30 seconds to deliberate which answers you think are suspicious. A new round will begin after.');
-    await this.cancelWrapper(timeout, 6000);
+    await this.timeout(6000);
   }
 
   async writingPod(selectedPlayers) {
@@ -362,7 +359,7 @@ class PushTheButton {
     const writingPodText = `
     Reply with anything to fill in the blank. You have 20 seconds.`;
 
-    await this.cancelWrapper(timeout, 5000);
+    await this.timeout(5000);
     const keys = Object.keys(topics);
     const chosenTopic = topics[keys[keys.length * Math.random() << 0]];
     const humanPrompt = chosenTopic[Math.floor(Math.random() * chosenTopic.length)];
@@ -375,10 +372,10 @@ class PushTheButton {
       if (selectedPlayer.username === 'Parell' || selectedPlayer.username === 'Keane') {
         if (this.alienIDs.has(selectedPlayer.id)) {
           const DMchannel = await selectedPlayer.send(alienPrompt);
-          return this.cancelWrapper(getInput, DMchannel, selectedPlayer, writingPodText, 15000);
+          return this.getInput(DMchannel, selectedPlayer, writingPodText, 15000);
         } else {
           const DMchannel = await selectedPlayer.send(humanPrompt);
-          return this.cancelWrapper(getInput, DMchannel, selectedPlayer, writingPodText, 15000);
+          return this.getInput(DMchannel, selectedPlayer, writingPodText, 15000);
         }
       }
       return '-1';
@@ -387,7 +384,7 @@ class PushTheButton {
     const playerResponses = await Promise.allSettled(promises);
 
     await this.channel.send(`Here was the prompt sent to the humans:\n*${humanPrompt}*`);
-    await this.cancelWrapper(timeout, 3500);
+    await this.timeout(3500);
 
     let playerResponsesText = '';
     for (let i = 0; i < playerResponses.length; i++) {
@@ -399,9 +396,9 @@ class PushTheButton {
     };
 
     await this.channel.send('And here is how they responded:' + playerResponsesText);
-    await this.cancelWrapper(timeout, 3500);
+    await this.timeout(3500);
     await this.channel.send('Spend 30 seconds to deliberate which answers you think are suspicious. A new round will begin after.');
-    await this.cancelWrapper(timeout, 6000);
+    await this.timeout(6000);
   }
 
   async bioScanner(selectedPlayers, captain) {
@@ -486,7 +483,7 @@ class PushTheButton {
 
     const optionsBuffer = Buffer.from(optionsb64.replace(/^data:image\/png;base64,/, ''), 'base64');
 
-    await this.cancelWrapper(timeout, 5000);
+    await this.timeout(5000);
 
     const responseEnums = {};
     responseEnums[-1] = 'none.png';
@@ -510,9 +507,9 @@ class PushTheButton {
             DMchannel = await selectedPlayer.send('The captain will now describe the next image...');
           }
           if (selectedPlayers[0] == selectedPlayer) {
-            return this.cancelWrapper(getMultipleChoiceInput, DMchannel, selectedPlayer, bioscannerText, optionsP1, 25000);
+            return this.getMultipleChoiceInput(DMchannel, selectedPlayer, bioscannerText, optionsP1, 25000, this.em);
           } else if (selectedPlayers[1] == selectedPlayer) {
-            return this.cancelWrapper(getMultipleChoiceInput, DMchannel, selectedPlayer, bioscannerText, optionsP2, 25000);
+            return this.getMultipleChoiceInput(DMchannel, selectedPlayer, bioscannerText, optionsP2, 25000, this.em);
           }
         } else {
           return '-1';
@@ -548,7 +545,7 @@ class PushTheButton {
       await this.bioScan(selectedPlayers, captain);
     } else {
       await this.channel.send(`Here were the glyphs the captain received:`, captainBuffer);
-      await this.cancelWrapper(timeout, 3500);
+      await this.timeout(3500);
 
       await this.channel.send(`And here were the players' chosen glyphs:`);
 
@@ -561,21 +558,21 @@ class PushTheButton {
           {src: bioimagesFilepath + totalResponses[i][2], x: 350, y: 0},
         ], {Canvas: Canvas, Image: Image});
         const responseBuffer = Buffer.from(responseb64.replace(/^data:image\/png;base64,/, ''), 'base64');
-        this.channel.send(`**${selectedPlayers[i].username}**:`, responseBuffer);
+        await this.channel.send(`**${selectedPlayers[i].username}**:`, responseBuffer);
       }
-      await this.cancelWrapper(timeout, 3500);
+      await this.timeout(3500);
       await this.channel.send('Spend 30 seconds to deliberate which answers you think are suspicious. A new round will begin after.');
-      await this.cancelWrapper(timeout, 30000);
+      await this.timeout(30000);
     }
   }
 
   async bioScan(selectedPlayers, captain) {
     await this.channel.send('The test has passed! The bioscanner will now proceed to scan a player\'s true identity.');
-    const response = await this.cancelWrapper(getMultipleChoiceInput, this.channel, captain,
+    const response = await this.getMultipleChoiceInput( this.channel, captain,
         'Captain, choose a player to be scanned. The results will be shown to only your eyes, ' +
         'but feel free to share them with the rest of the players.' +
         `\n\t\t1. **${selectedPlayers[0].username}**\n\t\t2. **${selectedPlayers[1].username}**`,
-        [1, 2], 15000);
+        [1, 2], 15000, this.em);
 
     if (response == '-1') {
       await this.channel.send('The testees escape scanning this time, as the captain couldn\'t make a decision in time!');
@@ -589,15 +586,16 @@ class PushTheButton {
     }
 
     await this.channel.send('The next round will begin shortly!');
-    await this.cancelWrapper(timeout, 5000);
+    await this.timeout(5000);
   }
 
   async extractionRoom(pusher) {
+    this.buttonable = false;
     let unpicked = Object.keys(this.players);
     unpicked = unpicked.filter((value) => value != pusher.id);
 
     await this.channel.send(undefined, imagesFilepath + 'buttonPushed.png');
-    await timeout(2500);
+    await this.timeout(2500);
     await this.channel.send(`${pusher.username} has pushed the button! The main game timer has been stopped and players will vote on `+
     `ejecting the ${this.numAliens} suspected aliens chosen by the button presser! The extraction will only proceed with an unanimous vote.`);
 
@@ -615,10 +613,9 @@ class PushTheButton {
         playerSelectionPrompt += `\n\t\t\t\t**${i+1}. ${this.players[unpicked[i]].user.username}**`;
         playerOptions.push('' + (i+1));
       }
-      const choiceUsers = await getMultipleChoiceInput(
+      const choiceUsers = await this.getMultipleChoiceInput(
           this.channel, pusher, `${pusher.username}, choose a player to be ejected. (${i+1}/${this.numAliens})` +
-            playerSelectionPrompt, playerOptions, 10000,
-      );
+            playerSelectionPrompt, playerOptions, 10000, this.em);
       if (choiceUsers === '-1') {
         skipExtraction = true;
         break;
@@ -632,7 +629,7 @@ class PushTheButton {
       const voteResult = await this.buttonVote(selectedPlayers, unpicked);
       if (voteResult == true) {
         await this.channel.send(`The vote has passed! The extraction chamber ejects along with its contents...`);
-        await timeout(2000);
+        await this.timeout(2000);
 
         let ejectPrompt = '';
         let alienWin = false;
@@ -646,7 +643,7 @@ class PushTheButton {
         });
 
         await this.channel.send(`And the identities of those ejected are...`);
-        await timeout(2000);
+        await this.timeout(2000);
         await this.channel.send(`—————————————————————————————————————` + ejectPrompt);
 
         if (alienWin) {
@@ -691,7 +688,7 @@ class PushTheButton {
     const promises = voters.map((voter) => (async () => {
       if (voter.username === 'Parell' || voter.username === 'Keane') {
         const DMchannel = await voter.send(`Vote on whether to eject the following players:` + ejectPrompt);
-        return getMultipleChoiceInput(DMchannel, voter, `Reply 1 for eject, 2 for do not eject.`, ['1', '2'], 15000);
+        return this.getMultipleChoiceInput(DMchannel, voter, `Reply 1 for eject, 2 for do not eject.`, ['1', '2'], 15000, this.em);
       } else {
         return '1';
       }
@@ -708,7 +705,7 @@ class PushTheButton {
    * @param {Message} message
    */
   async startCallback(message) {
-    this.channel.send(message.user.username +
+    await this.channel.send(message.user.username +
       ` is looking to start a game of Push the Button!
       Type \'!ptb join\' to play!`);
 
@@ -716,14 +713,18 @@ class PushTheButton {
       user: message.user,
     };
 
-    await new Promise((resolve, reject) => {
+    this.players[message.user.id].user.send = this.cancelWrapper(this.players[message.user.id].user.send.bind(this.players[message.user.id].user)).bind(this);
+
+    await new Promise(async (resolve, reject) => {
       this.startTimeout = setTimeout(async () => {
         if (Object.keys(this.players).length < 4) {
-          message.channel.send('Game aborted due to lack of players. At least four were needed.');
+          await this.channel.send('Game aborted due to lack of players. At least four were needed.');
+          this.startedFrom = 'start';
           resolve();
           return;
         }
         await this.playGame(message.channel);
+        this.startedFrom = 'start';
         resolve();
       }, 10000);
     });
@@ -733,15 +734,20 @@ class PushTheButton {
     if (this.players[message.user.id]) {
       return;
     }
-    this.channel.send(message.user.username + ' joined the game');
+    await this.channel.send(message.user.username + ' joined the game');
 
     this.players[message.user.id] = {
       user: message.user,
     };
+    this.players[message.user.id].user.send = this.cancelWrapper(this.players[message.user.id].user.send.bind(this.players[message.user.id].user)).bind(this);
 
     if (Object.keys(this.players).length === 10) {
-      clearTimeout(this.startTimeout);
-      await this.playGame(this.channel);
+      return new Promise(async (resolve, reject) => {
+        clearTimeout(this.startTimeout);
+        await this.playGame(this.channel);
+        this.startedFrom = 'join';
+        resolve();
+      });
     }
   };
 
@@ -784,6 +790,9 @@ const commands = {
           const ptb = new PushTheButton(message.channel);
           gameInstances[message.channel.id] = ptb;
           await ptb.startCallback(message);
+          if (ptb.startedFrom ==='start') {
+            delete gameInstances[message.channel.id];
+          }
           if (ptb.hasStarted === false) {
             delete gameInstances[message.channel.id];
           }
@@ -796,6 +805,9 @@ const commands = {
             const ptb = gameInstances[message.channel.id];
             if (ptb.hasStarted == false) {
               ptb.joinCallback(message);
+              if (ptb.startedFrom === 'join') {
+                delete gameInstances[message.channel.id];
+              }
             }
           }
         },
@@ -804,9 +816,12 @@ const commands = {
         subs: {},
         callback: async (message) => {
           if (gameInstances[message.channel.id]) {
-            gameInstances[message.channel.id].ended = true;
+            const ptb = gameInstances[message.channel.id];
             delete gameInstances[message.channel.id];
-            message.channel.send('Ending game...');
+            ptb.ended = true;
+            ptb.timeoutResolve();
+            ptb.em.emit('abort');
+            await message.channel.send('Game over');
           }
         },
       },
@@ -817,8 +832,12 @@ const commands = {
             const ptb = gameInstances[message.channel.id];
             if (ptb.buttonable === true) {
               if (ptb.buttonedState === false) {
-                ptb.buttonedState = true;
-                ptb.hasButtoned.unshift(message.user);
+                if (ptb.hasButtoned.includes(message.user) == false) {
+                  ptb.buttonedState = true;
+                  ptb.hasButtoned.unshift(message.user);
+                  ptb.timeoutResolve();
+                  ptb.em.emit('abort');
+                }
               }
             }
           }

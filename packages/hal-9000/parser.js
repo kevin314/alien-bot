@@ -7,10 +7,6 @@ class AlreadyWaitingForInputError extends Error {
   }
 }
 
-function timeout(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 function parseMessage(text, commands) {
   if (text[0] === '!') {
     const commandArr = text.slice(1).split(' ');
@@ -36,6 +32,23 @@ function parseMessage(text, commands) {
 }
 const store = {};
 
+function timer(callback, delay) {
+  let timerID;
+  let start;
+  let remaining = delay;
+
+  this.pause = () => {
+    clearTimeout(timerID);
+    remaining -= new Date() - start;
+  };
+
+  this.resume = () => {
+    start = new Date();
+    timerID = setTimeout(callback, remaining);
+  };
+
+  this.resume();
+}
 
 async function getInput(channel, user, text, time, em) {
   if ((user && store[`${channel.id},${user.id}`]) || store[channel.id]) {
@@ -88,17 +101,26 @@ function eminemMessageReceivedHandler(message) {
   store[`${message.channel.id},${message.user.id}`] && store[`${message.channel.id},${message.user.id}`](message.content);
 }
 
-async function getMultipleChoiceInput(channel, user, text, options, time) {
-  const em = new EventEmitter();
+async function getMultipleChoiceInput(channel, user, text, options, time, em) {
+  const timerEm = new EventEmitter();
   const timeout = new Promise((resolve, reject) => {
     setTimeout(() => {
       resolve('-1');
-      em.emit('abort');
+      timerEm.emit('abort');
     }, time);
   });
 
+  const cancel = new Promise((resolve, reject) => {
+    if (em) {
+      em.on('abort', () => {
+        resolve();
+        timerEm.emit('abort');
+      });
+    }
+  });
+
   const validResponse = (async () => {
-    let response = await getInput(channel, user, text, undefined, em);
+    let response = await getInput(channel, user, text, undefined, timerEm);
     if (!response) {
       return;
     }
@@ -109,11 +131,11 @@ async function getMultipleChoiceInput(channel, user, text, options, time) {
         return;
       }
     }
-
     return response;
   })();
 
   const race = Promise.race([
+    cancel,
     timeout,
     validResponse,
   ]);
@@ -121,4 +143,4 @@ async function getMultipleChoiceInput(channel, user, text, options, time) {
   return race;
 }
 
-module.exports = {timeout, parseMessage, getInput, getMultipleChoiceInput, eminemMessageReceivedHandler, AlreadyWaitingForInputError};
+module.exports = {parseMessage, getInput, getMultipleChoiceInput, eminemMessageReceivedHandler, AlreadyWaitingForInputError};
