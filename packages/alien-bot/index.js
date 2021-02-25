@@ -1,5 +1,5 @@
 const {Client} = require('eminem');
-const {eminemMessageReceivedHandler, getInput, getMultipleChoiceInput, parseMessage, AlreadyWaitingForInputError} = require('hal-9000');
+const {eminemMessageReceivedHandler, Timer, getInput, getMultipleChoiceInput, parseMessage, AlreadyWaitingForInputError} = require('hal-9000');
 const Message = require('eminem/Message');
 const Channel = require('eminem/Channel');
 const fs = require('fs');
@@ -16,7 +16,6 @@ const imagesFilepath = '/Users/kevsa/Documents/alien/alien-bot/packages/alien-bo
  */
 class PushTheButton {
   constructor(channel) {
-    console.log(channel);
     this.channel = new Channel(channel.channelJsonObject, channel.client);
     this.channel.send = this.cancelWrapper(this.channel.send.bind(this.channel)).bind(this);
     this.em = new EventEmitter();
@@ -56,11 +55,6 @@ class PushTheButton {
   }
 
   async playGame() {
-    setTimeout(async () => {
-      this.timeRunout = true;
-      await this.channel.send('Time has run out for the humans');
-    }, 600000);
-
     this.hasStarted = true;
     await this.channel.send('Push the Button now starting...');
 
@@ -91,10 +85,48 @@ class PushTheButton {
     }
     this.captainIDs = playerIDs;
 
+    this.mainTimer = new Timer(async () => {
+      // Don't await- this.ended needs to be set immediately
+      this.channel.send('Time has run out for the humans.');
+      this.ended = true;
+    }, 60000);
+
+    this.mainTimer.resume();
+
+    this.sendNewTimer = setInterval(async () => {
+      if (this.ended) {
+        clearInterval(this.sendNewTimer);
+      } else {
+        let timeLeft = Math.floor(this.mainTimer.getTimeLeft() / 1000);
+        if (timeLeft < 0) {
+          timeLeft = 0;
+        }
+        this.timerMsg = await this.channel.send(`**Time remaining:** *${Math.floor(timeLeft / 60)}:` +
+        `${Math.floor(timeLeft % 60)}*`);
+      }
+    }, 30000);
+
+    this.timerDisplay = setInterval(async () => {
+      if (this.ended) {
+        clearInterval(this.timerDisplay);
+      } else {
+        let timeLeft = Math.floor(this.mainTimer.getTimeLeft() / 1000);
+        if (timeLeft < 0) {
+          timeLeft = 0;
+        }
+        await this.timerMsg.edit(`**Time remaining:** *${Math.floor(timeLeft / 60)}:` +
+        `${Math.floor(timeLeft % 60)}*`);
+      }
+    }, 3000);
+
     while (this.ended == false && this.hasStarted) {
       try {
+        const timeLeft = Math.floor(this.mainTimer.getTimeLeft() / 1000);
+        this.timerMsg = await this.channel.send(`**Time remaining:** *${Math.floor(timeLeft / 60)}:` +
+        `${Math.floor(timeLeft % 60)}*`);
+
         this.buttonable = true;
-        const wasButtoned = false;
+        // const wasButtoned = false;
         let skipCaptain = false;
         //  const captain = this.players[this.captainIDs[this.round % this.captainIDs.length]].user;
         const captain = this.players['808288156667346954'].user;
@@ -189,8 +221,11 @@ class PushTheButton {
         }
       } catch (err) {
         console.log(err);
-        this.buttonedState = false;
-        await this.extractionRoom(this.hasButtoned[0]);
+        if (this.buttonedState === true) {
+          this.buttonedState = false;
+          await this.extractionRoom(this.hasButtoned[0]);
+          this.mainTimer.resume();
+        }
       }
       this.round++;
     }
@@ -448,8 +483,8 @@ class PushTheButton {
       captainImages.push(randomImageSet[Math.floor(Math.random() * randomImageSet.length)]);
     }
 
-    console.log('captain Images:');
-    console.log(captainImages);
+    //console.log('captain Images:');
+    //console.log(captainImages);
     const selectedUnhackedImages = captainImages.slice();
     for (let i = 0; i < 3; i++) {
       let unpickedUnhackedImages = chosenImageSets[i].filter((image) => image !== captainImages[i]);
@@ -522,7 +557,6 @@ class PushTheButton {
       totalResponses[1].push(responseEnums[playerResponses[1].value]);
     }
 
-    console.log(captainImages);
     const captainb64 = await mergeImages([
       {src: bioimagesFilepath + 'canvas2.png', x: 0, y: 0},
       {src: bioimagesFilepath + captainImages[0], x: 0, y: 0},
@@ -549,7 +583,6 @@ class PushTheButton {
 
       await this.channel.send(`And here were the players' chosen glyphs:`);
 
-      console.log(totalResponses);
       for (let i = 0; i < 2; i++) {
         const responseb64 = await mergeImages([
           {src: bioimagesFilepath + 'canvas2.png', x: 0, y: 0},
@@ -591,6 +624,7 @@ class PushTheButton {
 
   async extractionRoom(pusher) {
     this.buttonable = false;
+    this.mainTimer.pause();
     let unpicked = Object.keys(this.players);
     unpicked = unpicked.filter((value) => value != pusher.id);
 
@@ -889,6 +923,7 @@ bot2.on('message', (message) => {
   if (message.content.includes('Type \'!ptb join\' to play!')) {
     message.channel.send('!ptb join');
   } else if (message.content.includes('mai!')) {
+    console.log(message.user);
     message.user.send('uwu');
   } else if (message.content.includes('pls push button')) {
     message.channel.send('!ptb button');
@@ -897,14 +932,17 @@ bot2.on('message', (message) => {
   }
 });
 
-bot3.on('message', (message) => {
+bot3.on('message', async (message) => {
   if (message.content.includes('Type \'!ptb join\' to play!')) {
     message.channel.send('!ptb join');
   } else if (message.content.includes('1. Opinion Hold')) {
     message.channel.send('4');
   } else if (message.content.includes('yahallo!')) {
     // message.channel.send(undefined, bioimagesFilepath + 'yui1.PNG');
-    message.channel.send(undefined, buffer);
+    const msg = await message.channel.send('yahallo');
+    setTimeout(() => {
+      msg.edit('YAHALLO');
+    }, 3000);
   }
 
   if (message.content.includes('. Keane')) {

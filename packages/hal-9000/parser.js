@@ -32,22 +32,33 @@ function parseMessage(text, commands) {
 }
 const store = {};
 
-function timer(callback, delay) {
-  let timerID;
-  let start;
-  let remaining = delay;
+class Timer {
+  constructor(callback, delay) {
+    this.timerID;
+    this.remaining = delay;
+    this.start;
+    this.running;
+    this.callback = callback;
 
-  this.pause = () => {
-    clearTimeout(timerID);
-    remaining -= new Date() - start;
-  };
+    this.pause = () => {
+      this.running = false;
+      clearTimeout(this.timerID);
+      this.remaining -= new Date() - this.start;
+    };
 
-  this.resume = () => {
-    start = new Date();
-    timerID = setTimeout(callback, remaining);
-  };
+    this.resume = () => {
+      this.running = true;
+      this.start = new Date();
+      this.timerID = setTimeout(this.callback, this.remaining);
+    };
 
-  this.resume();
+    this.getTimeLeft = () => {
+      if (this.running === true) {
+        return this.remaining - (new Date() - this.start);
+      }
+      return this.remaining;
+    };
+  }
 }
 
 async function getInput(channel, user, text, time, em) {
@@ -143,4 +154,4 @@ async function getMultipleChoiceInput(channel, user, text, options, time, em) {
   return race;
 }
 
-module.exports = {parseMessage, getInput, getMultipleChoiceInput, eminemMessageReceivedHandler, AlreadyWaitingForInputError};
+module.exports = {parseMessage, Timer, getInput, getMultipleChoiceInput, eminemMessageReceivedHandler, AlreadyWaitingForInputError};
