@@ -76,11 +76,20 @@ async function getInput(channel, user, text, time, em) {
     }
   });
 
-  const timeout = new Promise((resolve, reject) => {
+  let interval;
+  const timeout = new Promise(async (resolve, reject) => {
     if (time) {
-      setTimeout(() => {
+      const timer = new Timer(() => {
         resolve('-1');
       }, time);
+
+      const timerMsg = await channel.send(`Time remaining: ${Math.floor(timer.getTimeLeft()/1000)}`);
+      interval = setInterval(async () => {
+        await timerMsg.edit(`Time remaining: ${Math.floor(timer.getTimeLeft()/1000)}`);
+      }, 3000);
+      /* setTimeout(() => {
+        resolve('-1');
+      }, time); */
     }
   });
 
@@ -99,6 +108,9 @@ async function getInput(channel, user, text, time, em) {
   ]);
 
   const ret = await race;
+  if (interval) {
+    clearInterval(interval);
+  }
   if (user) {
     delete store[`${channel.id},${user.id}`];
   } else {
@@ -114,11 +126,19 @@ function eminemMessageReceivedHandler(message) {
 
 async function getMultipleChoiceInput(channel, user, text, options, time, em) {
   const timerEm = new EventEmitter();
-  const timeout = new Promise((resolve, reject) => {
-    setTimeout(() => {
+  const timeout = new Promise(async (resolve, reject) => {
+    const timer = new Timer(async () => {
       resolve('-1');
       timerEm.emit('abort');
     }, time);
+    timer.resume();
+
+    const timeLeft = Math.floor(timer.getTimeLeft()/1000);
+    const timerMsg = await channel.send(`Time remaining: ${Math.floor(timeLeft/60)}:${Math.floor(timeLeft%60)}`);
+    interval = setInterval(async () => {
+      const timeLeft = Math.floor(timer.getTimeLeft()/1000);
+      await timerMsg.edit(`Time remaining: ${Math.floor(timeLeft/60)}:${Math.floor(timeLeft%60)}`);
+    }, 3000);
   });
 
   const cancel = new Promise((resolve, reject) => {
@@ -137,7 +157,7 @@ async function getMultipleChoiceInput(channel, user, text, options, time, em) {
     }
     const optionsSet = new Set(options);
     while (!optionsSet.has(response.trim())) {
-      response = await getInput(channel, user, `${response} is an invalid response to\n> ${text}\nTry again, must be one of ` + JSON.stringify(options), undefined, em);
+      response = await getInput(channel, user, `${response} is an invalid response to\n> ${text}\nTry again, must be one of ` + options.join(', '), undefined, em);
       if (!response) {
         return;
       }
@@ -151,7 +171,11 @@ async function getMultipleChoiceInput(channel, user, text, options, time, em) {
     validResponse,
   ]);
 
-  return race;
+  const ret = await race;
+  if (interval) {
+    clearInterval(interval);
+  }
+  return ret;
 }
 
 module.exports = {parseMessage, Timer, getInput, getMultipleChoiceInput, eminemMessageReceivedHandler, AlreadyWaitingForInputError};

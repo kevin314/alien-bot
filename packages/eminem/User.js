@@ -19,9 +19,9 @@ class User {
    * @param {String} message Message to be sent
    * @param {String} filepath Path to a local file
    */
-  async send(message, filepath) {
+  async send(message, filepath, embed) {
     // console.log(this.id);
-    return this.client.sendDM(this, message, filepath);
+    return this.client.sendDM(this, message, filepath, embed);
   }
 
   /**

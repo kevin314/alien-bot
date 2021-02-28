@@ -91,6 +91,7 @@ class Client extends EventEmitter {
         if (response['t'] == 'MESSAGE_CREATE') {
           // console.log('Message recieved');
           if (response['d']['author']['id'] !== this.id) {
+            //console.log(response);
             this.emit('message', new Message(response['d'], new Channel({'id': response['d']['channel_id']}, this),
                 new User(response['d']['author'], this), this));
           }
@@ -101,7 +102,7 @@ class Client extends EventEmitter {
     });
   }
 
-  async sendDM(user, message, filepath) {
+  async sendDM(user, message, filepath, embed) {
     const getDMChannelJSON = {
       recipient_id: user.id,
     };
@@ -138,10 +139,7 @@ class Client extends EventEmitter {
 
     //console.log(Channel);
     const DMchannel = new Channel(channelJSONObject, this);
-    if (message) {
-      await DMchannel.send(message, filepath);
-    }
-    return DMchannel;
+    return await DMchannel.send(message, filepath, embed);
   }
 
   sendChannel(channel, content, file, embed) {
@@ -150,7 +148,7 @@ class Client extends EventEmitter {
       form.append('content', content);
     }
     if (embed != undefined) {
-      form.append('embed', embed);
+      form.append('payload_json', embed);
     }
     if (file != undefined) {
       if (typeof file === 'string') {

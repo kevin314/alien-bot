@@ -20,10 +20,15 @@ class Message {
    * Edit the content of a message.
    * @param {String} content New message text
    */
-  async edit(content) {
-    const messageJSON = {
-      'content': content,
-    };
+  async edit(content, embed) {
+    let messageJSON;
+    if (embed) {
+      messageJSON = embed;
+    } else if (content) {
+      messageJSON = {
+        'content': content,
+      };
+    }
     const postData = JSON.stringify(messageJSON);
 
     const scope = {
