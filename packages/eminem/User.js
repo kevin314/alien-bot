@@ -10,6 +10,11 @@ class User {
    */
   constructor(authorJSON, client) {
     this.id = authorJSON['id'];
+    if (authorJSON['bot']) {
+      this.bot = true;
+    } else {
+      this.bot = false;
+    }
     this.username = authorJSON['username'];
     this.client = client;
   }

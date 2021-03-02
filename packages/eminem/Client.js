@@ -67,6 +67,7 @@ class Client extends EventEmitter {
     this.ws.on('message', async (data) => {
       const response = JSON.parse(data);
       const opcode = response['op'];
+      //  console.log(response);
 
       if (opcode == 10) {
         const heartbeatInterval = response['d']['heartbeat_interval'];

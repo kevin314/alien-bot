@@ -72,7 +72,10 @@ async function getInput(channel, user, text, time, em) {
 
   const cancel = new Promise((resolve, reject) => {
     if (em) {
-      em.on('abort', resolve);
+      em.on('abort', () => {
+        clearInterval(interval);
+        resolve();
+      });
     }
   });
 
@@ -80,12 +83,13 @@ async function getInput(channel, user, text, time, em) {
   const timeout = new Promise(async (resolve, reject) => {
     if (time) {
       const timer = new Timer(() => {
+        clearInterval(interval);
         resolve('-1');
       }, time);
 
-      const timerMsg = await channel.send(`Time remaining: ${Math.floor(timer.getTimeLeft()/1000)}`);
+      const timerMsg = await channel.send(`Time remaining: ${timer.getTimeLeft()/1000}s`);
       interval = setInterval(async () => {
-        await timerMsg.edit(`Time remaining: ${Math.floor(timer.getTimeLeft()/1000)}`);
+        await timerMsg.edit(`Time remaining: ${Math.floor(timer.getTimeLeft()/1000)}s`);
       }, 3000);
       /* setTimeout(() => {
         resolve('-1');
@@ -94,6 +98,7 @@ async function getInput(channel, user, text, time, em) {
   });
 
   const validResponse = new Promise((resolve, reject) => {
+    clearInterval(interval);
     if (user) {
       store[`${channel.id},${user.id}`] = resolve;
     } else {
@@ -108,9 +113,11 @@ async function getInput(channel, user, text, time, em) {
   ]);
 
   const ret = await race;
+
+  /*
   if (interval) {
     clearInterval(interval);
-  }
+  } */
   if (user) {
     delete store[`${channel.id},${user.id}`];
   } else {
@@ -126,6 +133,7 @@ function eminemMessageReceivedHandler(message) {
 
 async function getMultipleChoiceInput(channel, user, text, options, time, em) {
   const timerEm = new EventEmitter();
+
   const timeout = new Promise(async (resolve, reject) => {
     const timer = new Timer(async () => {
       resolve('-1');
@@ -133,11 +141,9 @@ async function getMultipleChoiceInput(channel, user, text, options, time, em) {
     }, time);
     timer.resume();
 
-    const timeLeft = Math.floor(timer.getTimeLeft()/1000);
-    const timerMsg = await channel.send(`Time remaining: ${Math.floor(timeLeft/60)}:${Math.floor(timeLeft%60)}`);
+    const timerMsg = await channel.send(`Time remaining: ${timer.getTimeLeft()/1000}s`);
     interval = setInterval(async () => {
-      const timeLeft = Math.floor(timer.getTimeLeft()/1000);
-      await timerMsg.edit(`Time remaining: ${Math.floor(timeLeft/60)}:${Math.floor(timeLeft%60)}`);
+      await timerMsg.edit(`Time remaining: ${timer.getTimeLeft()/1000}s`);
     }, 3000);
   });
 
@@ -173,6 +179,7 @@ async function getMultipleChoiceInput(channel, user, text, options, time, em) {
 
   const ret = await race;
   if (interval) {
+    console.log('clearing interval');
     clearInterval(interval);
   }
   return ret;
