@@ -7,10 +7,16 @@ class Message {
    * @param {Object} JSONObject Discord JSON message object
    * @param {Channel} channel
    * @param {User} user Instance of a Discord API client
+   * @param {Client} client
    */
   constructor(JSONObject, channel, user, client) {
     this.id = JSONObject['id'];
     this.content = JSONObject['content'];
+    if (JSONObject['guild_id']) {
+      this.isDM = false;
+    } else {
+      this.isDM = true;
+    }
     this.channel = channel;
     this.user = user;
     this.client = client;
@@ -19,6 +25,7 @@ class Message {
   /**
    * Edit the content of a message.
    * @param {String} content New message text
+   * @param {String} embed
    */
   async edit(content, embed) {
     let messageJSON;
@@ -45,7 +52,7 @@ class Message {
 
     const messageJSONObject = await new Promise((resolve, reject) => {
       const request = https.request(scope, (res) => {
-        //console.log(`statusCode: ${res.statusCode}`);
+        //  console.log(`statusCode: ${res.statusCode}`);
         let response = '';
         res.on('data', (d) => {
           response += d.toString();
@@ -67,7 +74,31 @@ class Message {
   /**
    * Delete the message from Discord.
    */
-  delete() {}
+  async delete() {
+    const scope = {
+      method: 'DELETE',
+      host: 'discord.com',
+      port: '443',
+      path: `/api/v8/channels/${this.channel.id}/messages/${this.id}`,
+      headers: {
+        'Authorization': `Bot ${this.client.botToken}`,
+        'Content-Type': 'application/json',
+      },
+    };
+
+    await new Promise((resolve, reject) => {
+      const request = https.request(scope, (res) => {
+        console.log(`statusCode: ${res.statusCode}`);
+        res.on('end', () => {
+          resolve();
+        });
+      });
+      request.on('error', (err) => {
+        reject(err);
+      });
+      request.end();
+    });
+  }
 
   /**
    * @see {@link Channel.prototype.send}

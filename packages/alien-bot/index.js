@@ -1,6 +1,5 @@
 const {Client} = require('eminem');
 const {eminemMessageReceivedHandler, Timer, getInput, getMultipleChoiceInput, parseMessage, AlreadyWaitingForInputError} = require('hal-9000');
-const Message = require('eminem/Message');
 const Channel = require('eminem/Channel');
 const fs = require('fs');
 const mergeImages = require('merge-images');
@@ -72,6 +71,8 @@ class PushTheButton {
 
     let unpicked = playerIDs.slice();
     this.alienIDs = new Set();
+
+    /*
     for (let i = 0; i < this.numAliens; i++) {
       //  const chosenAlienPlayer = unpicked[unpicked.length * Math.random() << 0];
       const chosenAlienPlayer = '99284711607644160';
@@ -79,6 +80,11 @@ class PushTheButton {
       this.alienIDs.add(chosenAlienPlayer);
       unpicked = unpicked.filter((value) => value !== chosenAlienPlayer);
     }
+    */
+    this.alienIDs.add('816307982127464458');
+    //  unpicked = unpicked.filter((value) => value !== '816307982127464458');
+    this.alienIDs.add('99284711607644160');
+    unpicked = unpicked.filter((value) => value !== '99284711607644160' && value !== '816307982127464458');
 
     this.humanIDs = new Set(unpicked);
 
@@ -98,7 +104,7 @@ class PushTheButton {
 
     // DM each user their identities
     if (this.alienIDs.size > 1) {
-      await this.channel.send(`Crew members, there are **${this.alienIDs.length}** aliens among you. They will have access to ` +
+      await this.channel.send(`Crew members, there are **${this.alienIDs.size}** aliens among you. They will have access to ` +
       `**${this.hacksLeft}** throughout the game. Your identities will be DM\'d to you shortly.`);
     } else {
       await this.channel.send(`Crew members, there is **one** alien among you. They will have access to ` +
@@ -113,10 +119,11 @@ class PushTheButton {
       }
     });
 
+    const alienIDsArr = Array.from(this.alienIDs);
     this.alienIDs.forEach(async (alienID) => {
       let text = '';
       if (this.alienIDs.size > 1) {
-        const otherAlienIDs = alienIDs.filter((value) => value !== alienID);
+        const otherAlienIDs = alienIDsArr.filter((value) => value !== alienID);
         text = 'Your fellow aliens:';
         otherAlienIDs.forEach((ID) => {
           text += `\n\t\t**${this.players[ID].user.username}**`;
@@ -128,8 +135,7 @@ class PushTheButton {
     });
 
     await this.updateHackChart(true);
-
-    this.timeout(6000);
+    //  await this.timeout(10000);
 
     this.mainTimer = new Timer(async () => {
       // Don't await- this.ended needs to be set immediately
@@ -177,6 +183,9 @@ class PushTheButton {
             }
           }
         }
+
+        await this.updateHackChart(false);
+
         const timeLeft = Math.floor(this.mainTimer.getTimeLeft() / 1000);
         this.timerMsg = await this.channel.send(`**Game time remaining:** *${Math.floor(timeLeft / 60)}:` +
         `${Math.floor(timeLeft % 60).toString(10).padStart(2, '0')}*`);
@@ -334,7 +343,7 @@ class PushTheButton {
 
     const playerResponses = await Promise.allSettled(promises);
 
-    await this.channel.send(`Here was the prompt sent to the humans:\n*${randomPrompt}*`);
+    await this.channel.send(`Here was the prompt sent to the humans:\n*${humanPrompt}*`);
     await this.timeout(3500);
 
     const agreeEnums = {'1': 'Strong disagree', '2': 'Slightly disagree', '3': 'Slightly agree', '4': 'Strongly agree', '-1': 'No response given'};
@@ -855,30 +864,29 @@ class PushTheButton {
       },
     };
 
-    return new Promise((resolve, reject) => {
-      if (resend === true) {
-        this.hackMessageObjects = [];
-        this.alienIDs.forEach(async (alienID) => {
-          const alien = this.players[alienID].user;
-          if (!(alien.username === 'Sakurajima Mai' || alien.username === 'Xiangling' || alien.username === 'Yui Yuigahama')) {
-            this.hackMessageObjects.push(await alien.send(undefined, undefined, JSON.stringify(this.hackEmbed)));
-          }
-        });
-      } else {
-        //  console.log('edit hack chart');
-        //  console.log('hacks left:' + this.hacksLeft);
-        //  console.log(this.hackEmbed);
-        let i = 0;
-        this.alienIDs.forEach(async (alienID) =>{
-          const alien = this.players[alienID].user;
-          if (!(alien.username === 'Sakurajima Mai' || alien.username === 'Xiangling' || alien.username === 'Yui Yuigahama')) {
-            await this.hackMessageObjects[i].edit(undefined, this.hackEmbed);
-          }
-          i++;
-        });
+    if (resend === true) {
+      this.hackMessageObjects = [];
+      for (const alienID of this.alienIDs) {
+        const alien = this.players[alienID].user;
+        if (alien.bot === false) {
+          const hackMsg = await alien.send(undefined, undefined, JSON.stringify(this.hackEmbed));
+          this.hackMessageObjects.push(hackMsg);
+        }
       }
+    } else {
+      let i = 0;
+      for (const alienID of this.alienIDs) {
+        const alien = this.players[alienID].user;
+        if (alien.bot === false) {
+          await this.hackMessageObjects[i].edit(undefined, this.hackEmbed);
+        }
+        i++;
+      }
+    }
+    /* return new Promise(async (resolve, reject) => {
+
       resolve();
-    });
+    }); */
   }
 
   async hack(message, target) {
@@ -982,6 +990,9 @@ const commands = {
       start: {
         subs: {},
         callback: async (message) => {
+          if (message.isDM === true) {
+            return;
+          }
           if (PTBgameInstances[message.channel.id]) {
             await message.channel.send('An instance of PTB has already started!');
             return;
@@ -1050,6 +1061,7 @@ const commands = {
         subs: {},
         callback: async (message) => {
           if (!playerInstances[message.user.id] || !playerInstances[message.user.id]['ptb']) {
+            console.log('button failed');
             return;
           }
           if (PTBgameInstances[message.channel.id]) {
@@ -1163,12 +1175,12 @@ bot3.on('message', async (message) => {
   if (message.content.includes('Type \'!ptb join\' to play!')) {
     message.channel.send('!ptb join');
   } else if (message.content.includes('1. Opinion Hold')) {
-    message.channel.send('4');
+    message.channel.send((Math.floor(Math.random() * 4) + 1).toString());
   } else if (message.content.includes('yahallo!')) {
     // message.channel.send(undefined, bioimagesFilepath + 'yui1.PNG');
     const msg = await message.channel.send(undefined, undefined, embed);
     setTimeout(() => {
-      msg.edit('good', edit);
+      msg.delete();
     }, 3000);
   }
 
@@ -1176,6 +1188,8 @@ bot3.on('message', async (message) => {
     message.channel.send(message.content[message.content.indexOf('Keane') - 3]);
   } else if (message.content.includes('. Parell')) {
     message.channel.send(message.content[message.content.indexOf('Parell') - 3]);
+  } else if (message.content.includes('. Paimon')) {
+    message.channel.send(message.content[message.content.indexOf('Paimon') - 3]);
   } else if (message.content.includes('. Xiangling')) {
     message.channel.send(message.content[message.content.indexOf('Xiangling') - 3]);
   }

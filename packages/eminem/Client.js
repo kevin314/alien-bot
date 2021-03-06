@@ -92,7 +92,7 @@ class Client extends EventEmitter {
         if (response['t'] == 'MESSAGE_CREATE') {
           // console.log('Message recieved');
           if (response['d']['author']['id'] !== this.id) {
-            //console.log(response);
+            //  console.log(response);
             this.emit('message', new Message(response['d'], new Channel({'id': response['d']['channel_id']}, this),
                 new User(response['d']['author'], this), this));
           }
