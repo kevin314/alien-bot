@@ -11,16 +11,18 @@ class AlreadyWaitingForInputError extends Error {
 }
 
 function eminemMessageReceivedHandler(message) {
-  if (store[message.channel.id]) {
+  /* if (store[message.channel.id]) {
     //  clearInterval(store[message.channel.id]['interval']);
+    store[message.channel.id]['interval'] = true;
     store[message.channel.id]['resolve'](message.content);
   }
   if (store[`${message.channel.id},${message.user.id}`]) {
     //  clearInterval(store[`${message.channel.id},${message.user.id}`]['interval']);
+    store[`${message.channel.id},${message.user.id}`]['interval'] = true;
     store[`${message.channel.id},${message.user.id}`]['resolve'](message.content);
-  }
-  /* store[message.channel.id] && store[message.channel.id](message.content);
-  store[`${message.channel.id},${message.user.id}`] && store[`${message.channel.id},${message.user.id}`](message.content); */
+  } */
+  store[message.channel.id] && store[message.channel.id](message.content);
+  store[`${message.channel.id},${message.user.id}`] && store[`${message.channel.id},${message.user.id}`](message.content);
 }
 
 async function getInput(channel, user, text, time, em) {
@@ -32,14 +34,14 @@ async function getInput(channel, user, text, time, em) {
     await channel.send(text);
   }
 
-  //const done = {'val': false};
+  //  const done = {'val': false};
   let interval;
 
   const cancel = new Promise((resolve, reject) => {
     if (em) {
       em.once('abort', () => {
-        //  done['val'] = true;
-        clearInterval(interval);
+        /* console.log('aborted interval');
+        clearInterval(interval); */
         resolve();
       });
     }
@@ -48,19 +50,14 @@ async function getInput(channel, user, text, time, em) {
   const timeout = new Promise(async (resolve, reject) => {
     if (time) {
       const timer = new Timer(() => {
-        //  done['val'] = true;
-        clearInterval(interval);
+        /* console.log('timedout interval');
+        clearInterval(interval); */
         resolve('-1');
       }, time);
       timer.resume();
 
       const timerMsg = await channel.send(`Time remaining: ${timer.getTimeLeft()/1000}s`);
       interval = setInterval(async () => {
-        /* if (done['val'] === true) {
-          clearInterval(interval);
-        } else {
-          await timerMsg.edit(`Time remaining: ${Math.floor(timer.getTimeLeft()/1000)}s`);
-        } */
         await timerMsg.edit(`Time remaining: ${Math.floor(timer.getTimeLeft()/1000)}s`);
       }, 3000);
     }
@@ -68,11 +65,9 @@ async function getInput(channel, user, text, time, em) {
 
   const validResponse = new Promise((resolve, reject) => {
     if (user) {
-      //store[`${channel.id},${user.id}`] = {'resolve': resolve, 'done': done};
-      store[`${channel.id},${user.id}`] = {'resolve': resolve, 'interval': interval};
+      store[`${channel.id},${user.id}`] = resolve;
     } else {
-      //store[channel.id] = {'resolve': resolve, 'done': done};
-      store[channel.id]= {'resolve': resolve, 'interval': interval};
+      store[channel.id]= resolve;
     }
   });
 
@@ -84,9 +79,10 @@ async function getInput(channel, user, text, time, em) {
 
   const ret = await race;
 
-  /*  if (interval) {
+  if (interval) {
+    //  console.log('clearing interval');
     clearInterval(interval);
-  } */
+  }
   if (user) {
     delete store[`${channel.id},${user.id}`];
   } else {
@@ -95,7 +91,6 @@ async function getInput(channel, user, text, time, em) {
   return ret;
 }
 
-
 async function getMultipleChoiceInput(channel, user, text, options, time, em) {
   const timerEm = new EventEmitter();
 
@@ -103,7 +98,7 @@ async function getMultipleChoiceInput(channel, user, text, options, time, em) {
 
   const timeout = new Promise(async (resolve, reject) => {
     const timer = new Timer(async () => {
-      clearInterval(interval);
+      //  clearInterval(interval);
       resolve('-1');
       timerEm.emit('abort');
     }, time);
@@ -118,7 +113,7 @@ async function getMultipleChoiceInput(channel, user, text, options, time, em) {
   const cancel = new Promise((resolve, reject) => {
     if (em) {
       em.once('abort', () => {
-        clearInterval(interval);
+        //  clearInterval(interval);
         resolve();
         timerEm.emit('abort');
       });
@@ -132,12 +127,12 @@ async function getMultipleChoiceInput(channel, user, text, options, time, em) {
     }
     const optionsSet = new Set(options);
     while (!optionsSet.has(response.trim())) {
-      response = await getInput(channel, user, `${response} is an invalid response to\n> ${text}\nTry again, must be one of ` + options.join(', '), undefined, em);
+      response = await getInput(channel, user, `${response} is an invalid response to\n> ${text}\nTry again, must be one of ` + options.join(', '), undefined, timerEm);
       if (!response) {
         return;
       }
     }
-    clearInterval(interval);
+    //  clearInterval(interval);
     return response;
   })();
 
@@ -147,7 +142,12 @@ async function getMultipleChoiceInput(channel, user, text, options, time, em) {
     validResponse,
   ]);
 
-  return race;
+  ret = await race;
+  if (interval) {
+    //  console.log('clearing interval');
+    clearInterval(interval);
+  }
+  return ret;
 }
 
 module.exports = {getMultipleChoiceInput, getInput, eminemMessageReceivedHandler, AlreadyWaitingForInputError};

@@ -86,12 +86,10 @@ class Message {
       },
     };
 
-    await new Promise((resolve, reject) => {
+    return await new Promise((resolve, reject) => {
       const request = https.request(scope, (res) => {
-        console.log(`statusCode: ${res.statusCode}`);
-        res.on('end', () => {
-          resolve();
-        });
+        //  console.log(`statusCode: ${res.statusCode}`);
+        resolve();
       });
       request.on('error', (err) => {
         reject(err);
