@@ -644,7 +644,7 @@ class PushTheButton {
     let optionsP1 = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
     let optionsP2 = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
 
-    for (let i = 0; i < 3; i++) {
+    /* for (let i = 0; i < 3; i++) {
       const promises = selectedPlayers.map((selectedPlayer) => (async () => {
         if (selectedPlayer.bot === false) {
           let DMmessage;
@@ -673,6 +673,10 @@ class PushTheButton {
       if (i !== 2 && captain.bot === false) {
         await captain.send('The players have responded for the first image, move on to the next one.');
       }
+    } */
+
+    async function sendImages() {
+      await selectedPlayer;
     }
 
     const passed = [true, true];
