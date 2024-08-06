@@ -36,7 +36,6 @@ class Client extends EventEmitter {
 
     const responseData = await new Promise((resolve, reject) => {
       const request = https.request(scope, (res) => {
-        // console.log(`URL statusCode: ${res.statusCode}`);
         let response = '';
         res.on('data', (d) => {
           response += d.toString();
@@ -67,7 +66,6 @@ class Client extends EventEmitter {
     this.ws.on('message', async (data) => {
       const response = JSON.parse(data);
       const opcode = response['op'];
-      //  console.log(response);
 
       if (opcode == 10) {
         const heartbeatInterval = response['d']['heartbeat_interval'];
@@ -92,7 +90,6 @@ class Client extends EventEmitter {
         if (response['t'] == 'MESSAGE_CREATE') {
           // console.log('Message recieved');
           if (response['d']['author']['id'] !== this.id) {
-            //  console.log(response);
             this.emit('message', new Message(response['d'], new Channel({'id': response['d']['channel_id']}, this),
                 new User(response['d']['author'], this), this));
           }
@@ -108,7 +105,6 @@ class Client extends EventEmitter {
       recipient_id: user.id,
     };
     const postData = JSON.stringify(getDMChannelJSON);
-    // console.log(postData);
     const scope = {
       method: 'POST',
       host: 'discord.com',
@@ -122,7 +118,6 @@ class Client extends EventEmitter {
     };
     const channelJSONObject = await new Promise((resolve, reject) => {
       const request = https.request(scope, (res) => {
-        // console.log(`getUser statusCode: ${res.statusCode}`);
         let response = '';
         res.on('data', (d) => {
           response += d.toString();
@@ -138,7 +133,6 @@ class Client extends EventEmitter {
       request.end();
     });
 
-    //console.log(Channel);
     const DMchannel = new Channel(channelJSONObject, this);
     return await DMchannel.send(message, filepath, embed);
   }

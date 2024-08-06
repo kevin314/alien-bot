@@ -25,7 +25,6 @@ class User {
    * @param {String} filepath Path to a local file
    */
   async send(message, filepath, embed) {
-    // console.log(this.id);
     return this.client.sendDM(this, message, filepath, embed);
   }
 

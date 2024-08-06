@@ -1,6 +1,5 @@
 const https = require('https');
 async function getChannel(channelId, botToken) {
-  console.log('Getting channel');
   const scope = {
     method: 'GET',
     host: 'discord.com',
@@ -14,10 +13,7 @@ async function getChannel(channelId, botToken) {
 
   return new Promise((resolve, reject) => {
     const request = https.request(scope, (res) => {
-      console.log(`getChannel statusCode: ${res.statusCode}`);
       res.on('data', (d) => {
-        console.log('Channel created');
-        console.log(JSON.parse(d.toString()));
         resolve(JSON.parse(d.toString()));
       });
     });
@@ -29,7 +25,6 @@ async function getChannel(channelId, botToken) {
 }
 
 async function getUser(userID) {
-  console.log('Getting user');
   const scope = {
     method: 'GET',
     host: 'discord.com',
@@ -42,10 +37,7 @@ async function getUser(userID) {
 
   return new Promise((resolve, reject) => {
     const request = https.request(scope, (res) => {
-      console.log(`getUser statusCode: ${res.statusCode}`);
       res.on('data', (d) => {
-        console.log('User created');
-        console.log(JSON.parse(d.toString()));
         resolve(JSON.parse(d.toString()));
       });
     });

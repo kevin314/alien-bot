@@ -34,14 +34,12 @@ async function getInput(channel, user, text, time, em) {
     await channel.send(text);
   }
 
-  //  const done = {'val': false};
   let interval;
 
   const cancel = new Promise((resolve, reject) => {
     if (em) {
       em.once('abort', () => {
-        /* console.log('aborted interval');
-        clearInterval(interval); */
+        // clearInterval(interval);
         resolve();
       });
     }
@@ -50,8 +48,7 @@ async function getInput(channel, user, text, time, em) {
   const timeout = new Promise(async (resolve, reject) => {
     if (time) {
       const timer = new Timer(() => {
-        /* console.log('timedout interval');
-        clearInterval(interval); */
+        // clearInterval(interval);
         resolve('-1');
       }, time);
       timer.resume();
@@ -80,7 +77,6 @@ async function getInput(channel, user, text, time, em) {
   const ret = await race;
 
   if (interval) {
-    //  console.log('clearing interval');
     clearInterval(interval);
   }
   if (user) {
@@ -98,7 +94,7 @@ async function getMultipleChoiceInput(channel, user, text, options, time, em) {
 
   const timeout = new Promise(async (resolve, reject) => {
     const timer = new Timer(async () => {
-      //  clearInterval(interval);
+      // clearInterval(interval);
       resolve('-1');
       timerEm.emit('abort');
     }, time);
@@ -113,7 +109,7 @@ async function getMultipleChoiceInput(channel, user, text, options, time, em) {
   const cancel = new Promise((resolve, reject) => {
     if (em) {
       em.once('abort', () => {
-        //  clearInterval(interval);
+        // clearInterval(interval);
         resolve();
         timerEm.emit('abort');
       });
@@ -132,7 +128,7 @@ async function getMultipleChoiceInput(channel, user, text, options, time, em) {
         return;
       }
     }
-    //  clearInterval(interval);
+    // clearInterval(interval);
     return response;
   })();
 
@@ -144,7 +140,6 @@ async function getMultipleChoiceInput(channel, user, text, options, time, em) {
 
   ret = await race;
   if (interval) {
-    //  console.log('clearing interval');
     clearInterval(interval);
   }
   return ret;

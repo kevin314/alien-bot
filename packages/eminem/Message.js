@@ -52,7 +52,6 @@ class Message {
 
     const messageJSONObject = await new Promise((resolve, reject) => {
       const request = https.request(scope, (res) => {
-        //  console.log(`statusCode: ${res.statusCode}`);
         let response = '';
         res.on('data', (d) => {
           response += d.toString();
@@ -88,7 +87,6 @@ class Message {
 
     return await new Promise((resolve, reject) => {
       const request = https.request(scope, (res) => {
-        //  console.log(`statusCode: ${res.statusCode}`);
         resolve();
       });
       request.on('error', (err) => {
